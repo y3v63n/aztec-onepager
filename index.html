@@ -720,7 +720,7 @@ AZTEC_ADMIN_PORT=8880</code></pre>
       --node
       --archiver
       --sequencer
-      --network <span class="show-testnet">ignition</span><span class="show-mainnet">ignition</span></span>
+      --network <span class="show-testnet">testnet</span><span class="show-mainnet">mainnet</span></span>
     networks:
       - aztec
     <span data-hl="dc-restart">restart: always</span>
@@ -1103,10 +1103,9 @@ configFields.forEach(id => {
   if (el) el.addEventListener('input', saveConfig);
 });
 
-// ── Auto-clear secrets on tab close ──
-window.addEventListener('beforeunload', function() {
-  sessionStorage.removeItem(SECRET_KEY);
-});
+// Secrets are in sessionStorage which auto-clears when the tab/browser closes.
+// No beforeunload needed — sessionStorage persists across refreshes (same tab)
+// but is wiped when the tab is closed.
 
 // ── Template rendering (masks secrets in visible output, stores full values for copy) ──
 function maskSecret(val) {
@@ -1117,6 +1116,10 @@ function maskSecret(val) {
 // Store full (unmasked) values for copy buttons
 let fullTemplateValues = {};
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function renderTemplates() {
   const displayVals = {};
   fullTemplateValues = {};
@@ -1124,13 +1127,13 @@ function renderTemplates() {
     const el = document.getElementById(id);
     const raw = el && el.value ? el.value : '';
     const key = fieldMap[id];
-    // Full values for clipboard copy
+    // Full values for clipboard copy (plain text, not HTML)
     fullTemplateValues[key] = raw || '{{' + key + '}}';
-    // Masked values for display
+    // Masked + escaped values for safe display in innerHTML
     if (secretFields.includes(id) && raw) {
-      displayVals[key] = maskSecret(raw);
+      displayVals[key] = escapeHtml(maskSecret(raw));
     } else {
-      displayVals[key] = raw || '{{' + key + '}}';
+      displayVals[key] = escapeHtml(raw) || '{{' + key + '}}';
     }
   });
 
@@ -1141,7 +1144,7 @@ function renderTemplates() {
     let fullText = el.dataset.orig;
     Object.keys(displayVals).forEach(k => {
       html = html.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), displayVals[k]);
-      fullText = fullText.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), fullTemplateValues[k]);
+      fullText = fullText.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), escapeHtml(fullTemplateValues[k]));
     });
     el.innerHTML = html;
     // Store full text (with unmasked secrets) for copy button
@@ -1256,15 +1259,15 @@ function loadChecks() {
 
 function saveChecks() {
   const data = {};
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+  document.querySelectorAll('input[type="checkbox"]:not(#net-toggle)').forEach(cb => {
     if (cb.checked) data[cb.id] = true;
   });
   localStorage.setItem(CHECK_KEY, JSON.stringify(data));
 }
 
 function updateProgress() {
-  const all = document.querySelectorAll('input[type="checkbox"]');
-  const checked = document.querySelectorAll('input[type="checkbox"]:checked');
+  const all = document.querySelectorAll('input[type="checkbox"]:not(#net-toggle)');
+  const checked = document.querySelectorAll('input[type="checkbox"]:not(#net-toggle):checked');
   const total = all.length;
   const done = checked.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -1395,13 +1398,15 @@ function exportSession() {
   const vals = {};
   configFields.forEach(id => { const el = document.getElementById(id); if (el && el.value) vals[fieldMap[id]] = el.value; });
 
-  const v = (k, fallback) => vals[k] || fallback || '{{' + k + '}}';
+  // Sanitize user values for safe embedding in bash heredocs
+  const sanitize = (str) => str.replace(/'/g, "'\\''");
+  const v = (k, fallback) => sanitize(vals[k] || fallback || '{{' + k + '}}');
 
   const gse = isMainnet ? '0xa92ecFD0E70c9cd5E5cd76c50Af0F7Da93567a4f' : '0xb6a38a51a6c1de9012f9d8ea9745ef957212eaac';
   const registry = isMainnet ? '0x35b22e09ee0390539439e24f06da43d83f90e298' : '0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba';
   const rollup = isMainnet ? '0x603bb2c05d474794ea97805e8de69bccfb3bca12' : '0x5932FCb01B6f63550C8bd91055613752480B6455';
   const imgTag = isMainnet ? '2.1.11' : 'latest';
-  const networkName = 'ignition';
+  const networkName = isMainnet ? 'mainnet' : 'testnet';
 
   let s = '';
   const L = (line) => { s += line + '\n'; };
