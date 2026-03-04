@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aztec Sequencer: Zero to Proposing Blocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Aztec docs palette */
+    --az-bg: #f2eee1; --az-text: #1a1400; --az-text-secondary: #424549;
+    --az-link: #cc24c3; --az-link-hover: #ff2df4;
+    --az-card-bg: #fffdf7; --az-border: #d9d4c7;
+    /* Admonition colors (from Aztec custom.css) */
+    --info-bg: #d8e0fd; --info-border: #466cf7; --info-text: #424549;
+    --tip-bg: #ccf0e3; --tip-border: #31a67b; --tip-text: #424549;
+    --warning-bg: #ffe2b1; --warning-border: #ffc564; --warning-text: #424549;
+    --danger-bg: #ffd1cb; --danger-border: #ff7764; --danger-text: #424549;
+    /* Code */
+    --code-bg: #1a1400; --code-text: #f2eee1; --code-highlight: rgba(230,211,238,0.75);
+    /* Utility */
+    --green: #31a67b; --green-light: #ccf0e3;
+    --slate-400: #94a3b8; --slate-500: #64748b;
+    /* Typography */
+    --sans: 'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --mono: 'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--sans); line-height:1.6; color:var(--az-text); background:var(--az-bg); max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  h1 { font-size:1.75rem; font-weight:700; color:var(--az-text); margin-bottom:.25rem; }
+  .subtitle { color:var(--az-text-secondary); margin-bottom:.5rem; font-size:.9rem; }
+  h2 { font-size:1.125rem; font-weight:700; color:var(--az-text); margin:2.5rem 0 1rem; padding-bottom:.5rem; border-bottom:2px solid var(--az-border); }
+  h3 { font-size:.95rem; font-weight:600; color:var(--az-text); margin:1.5rem 0 .5rem; }
+  p,li { font-size:.9rem; color:var(--az-text-secondary); }
+  ul,ol { padding-left:1.25rem; margin-bottom:.75rem; }
+  li { margin-bottom:.35rem; }
+  a { color:var(--az-link); text-decoration:none; }
+  a:hover { color:var(--az-link-hover); text-decoration:underline; }
+  strong { color:var(--az-text); }
+  code { font-family:var(--mono); font-size:.8rem; background:var(--code-highlight); padding:.15rem .4rem; border-radius:.25rem; color:var(--az-text); }
+  pre { background:var(--code-bg); color:var(--code-text); padding:1rem 1.25rem; border-radius:8px; overflow-x:auto; font-size:.8rem; font-family:var(--mono); line-height:1.5; margin:.5rem 0 .75rem; position:relative; white-space:pre-wrap; word-break:break-all; }
+  pre code { background:none; padding:0; color:inherit; }
+  .comment { color:#94a3b8; }
+
+  /* ── Progress bar ── */
+  #progress-bar { position:sticky; top:0; z-index:100; background:var(--az-bg); border-bottom:1px solid var(--az-border); padding:.5rem 1rem; display:flex; align-items:center; gap:1rem; margin:-2rem -1.5rem 1.5rem; padding-left:1.5rem; padding-right:1.5rem; }
+  #progress-bar .bar { flex:1; height:6px; background:var(--az-border); border-radius:3px; overflow:hidden; }
+  #progress-bar .bar-fill { height:100%; background:var(--az-link); transition:width .3s; border-radius:3px; }
+  #progress-bar .label { font-size:.8rem; font-weight:600; color:var(--az-text-secondary); white-space:nowrap; }
+
+  /* ── Network toggle ── */
+  .net-toggle { display:flex; align-items:center; gap:.75rem; background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:8px; padding:.5rem 1rem; margin-bottom:1.5rem; }
+  .net-toggle label { font-size:.8rem; font-weight:600; color:var(--az-text-secondary); text-transform:uppercase; letter-spacing:.03em; }
+  .toggle-switch { position:relative; width:48px; height:24px; cursor:pointer; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--warning-border); border-radius:24px; transition:.3s; }
+  .toggle-slider::before { content:''; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+  .toggle-switch input:checked + .toggle-slider { background:var(--az-link); }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(24px); }
+  .net-label { font-size:.85rem; font-weight:700; min-width:70px; }
+  .net-label.testnet { color:var(--warning-border); }
+  .net-label.mainnet { color:var(--az-link); }
+  .show-testnet { display:inline; }
+  .show-mainnet { display:none; }
+  body.mainnet .show-testnet { display:none; }
+  body.mainnet .show-mainnet { display:inline; }
+
+  /* ── Config panel ── */
+  .config-panel { background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:8px; margin-bottom:2rem; overflow:hidden; }
+  .config-header { padding:.75rem 1rem; background:var(--code-bg); color:var(--code-text); display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+  .config-header h3 { color:var(--code-text); margin:0; font-size:.9rem; }
+  .config-header .toggle { font-size:.7rem; opacity:.7; }
+  .config-desc { padding:.5rem 1rem; font-size:.8rem; color:var(--az-text-secondary); background:var(--az-bg); border-bottom:1px solid var(--az-border); }
+  .config-body { padding:1rem; display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; }
+  .config-field { display:flex; flex-direction:column; gap:.2rem; }
+  .config-field.full { grid-column:1/-1; }
+  .config-field label { font-size:.7rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:.03em; }
+  .config-field input { font-family:var(--mono); font-size:.8rem; padding:.4rem .5rem; border:1px solid var(--az-border); border-radius:4px; background:var(--az-bg); color:var(--az-text); width:100%; }
+  .config-field input:focus { outline:none; border-color:var(--az-link); box-shadow:0 0 0 2px rgba(204,36,195,.15); }
+  .config-field input::placeholder { color:var(--slate-400); }
+  .config-sep { grid-column:1/-1; border:none; border-top:1px solid var(--az-border); margin:.25rem 0; }
+  .config-security { padding:.5rem 1rem; font-size:.75rem; color:var(--slate-500); background:var(--az-bg); border-top:1px solid var(--az-border); display:flex; align-items:center; gap:.5rem; }
+  .config-security svg { flex-shrink:0; }
+  .pw-toggle { font-family:var(--sans); font-size:.7rem; padding:.25rem .5rem; border:1px solid var(--az-border); border-radius:4px; cursor:pointer; background:var(--az-card-bg); color:var(--az-text-secondary); margin-left:.25rem; white-space:nowrap; }
+
+  /* ── Copy button ── */
+  .copy-btn { position:absolute; top:.5rem; right:.5rem; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:var(--code-text); font-family:var(--sans); font-size:.7rem; padding:.25rem .5rem; border-radius:4px; cursor:pointer; opacity:0; transition:opacity .15s; }
+  pre:hover .copy-btn { opacity:1; }
+  .copy-btn:hover { background:rgba(255,255,255,.2); }
+  .copy-btn.copied { background:var(--green); border-color:var(--green); color:#fff; opacity:1; }
+
+  /* ── Callout ── */
+  .callout { padding:.75rem 1rem; border-radius:8px; margin:.75rem 0; font-size:.85rem; display:flex; align-items:flex-start; gap:.5rem; border-left:4px solid transparent; }
+  .callout-icon { flex-shrink:0; font-size:1rem; margin-top:.05rem; }
+  .callout-info { background:var(--info-bg); border-left-color:var(--info-border); color:var(--info-text); }
+  .callout-tip { background:var(--tip-bg); border-left-color:var(--tip-border); color:var(--tip-text); }
+  .callout-warning { background:var(--warning-bg); border-left-color:var(--warning-border); color:var(--warning-text); }
+  .callout-danger { background:var(--danger-bg); border-left-color:var(--danger-border); color:var(--danger-text); }
+
+  /* ── Check row ── */
+  .check-row { display:flex; align-items:flex-start; gap:.5rem; padding:.5rem 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:.85rem; }
+  .check-row:last-child { border-bottom:none; }
+  .check-row input[type="checkbox"] { margin-top:.2rem; accent-color:var(--az-link); width:1rem; height:1rem; flex-shrink:0; }
+  .check-row label { cursor:pointer; flex:1; }
+  .hint { color:var(--slate-500); font-size:.8rem; margin-top:.1rem; }
+
+  /* ── Step section ── */
+  .step-section { background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:8px; padding:1.25rem; margin-bottom:1.5rem; }
+  .step-num { display:inline-flex; align-items:center; justify-content:center; width:1.75rem; height:1.75rem; background:var(--az-link); color:#fff; border-radius:50%; font-size:.8rem; font-weight:700; margin-right:.5rem; flex-shrink:0; }
+  .step-num.done { background:var(--green); }
+  .step-title { display:flex; align-items:center; margin-bottom:.75rem; }
+  .step-title h2 { margin:0; border:none; padding:0; }
+  .step-time { font-size:.75rem; color:var(--slate-400); margin-left:auto; white-space:nowrap; }
+
+  /* ── Collapsible (why / troubleshoot) ── */
+  details.why { margin:.5rem 0; }
+  details.why summary { cursor:pointer; font-size:.8rem; color:var(--az-link); font-weight:600; user-select:none; }
+  details.why .detail-body { margin-top:.5rem; padding:.75rem; background:var(--info-bg); border:1px solid var(--info-border); border-radius:8px; font-size:.85rem; color:var(--az-text-secondary); }
+  details.trouble summary { cursor:pointer; font-size:.8rem; color:var(--warning-border); font-weight:600; user-select:none; margin-top:.5rem; }
+  details.trouble .detail-body { margin-top:.5rem; padding:.75rem; background:var(--warning-bg); border:1px solid var(--warning-border); border-radius:8px; font-size:.85rem; color:var(--az-text-secondary); }
+
+  /* ── Verification gate ── */
+  .gate { background:var(--tip-bg); border:2px solid var(--tip-border); border-radius:8px; padding:.75rem 1rem; margin:1rem 0; }
+  .gate-title { font-size:.85rem; font-weight:700; color:var(--tip-border); margin-bottom:.5rem; }
+
+  /* ── Expected output ── */
+  .expected { background:#0d0a00; color:#a9cc1f; padding:.75rem 1rem; border-radius:8px; font-family:var(--mono); font-size:.78rem; margin:.5rem 0; border-left:3px solid var(--az-link); white-space:pre-wrap; }
+  .expected-label { font-size:.7rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:.03em; margin-bottom:.25rem; }
+
+  /* ── Glossary tooltip ── */
+  .term { border-bottom:1px dashed var(--az-link); cursor:help; position:relative; color:var(--az-text); }
+  .term:hover::after { content:attr(data-def); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--code-bg); color:var(--code-text); font-size:.75rem; padding:.4rem .6rem; border-radius:6px; white-space:nowrap; max-width:280px; white-space:normal; z-index:50; line-height:1.4; pointer-events:none; }
+  .term:hover::before { content:''; position:absolute; bottom:calc(100% + 2px); left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--code-bg); z-index:50; }
+
+  /* ── Cost panel ── */
+  .cost-panel { background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:8px; padding:1rem; margin:1rem 0; }
+  .cost-panel h3 { margin:0 0 .5rem; font-size:.85rem; }
+  .cost-row { display:flex; justify-content:space-between; padding:.3rem 0; font-size:.85rem; border-bottom:1px solid rgba(0,0,0,.06); }
+  .cost-row:last-child { border-bottom:none; font-weight:700; }
+
+  /* ── TOC ── */
+  .toc { background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:8px; padding:1.25rem; margin-bottom:2rem; }
+  .toc h3 { margin:0 0 .5rem; font-size:.9rem; }
+  .toc ol { padding-left:1.5rem; margin:0; }
+  .toc li { margin-bottom:.25rem; font-size:.85rem; }
+  .toc li a { color:var(--az-text-secondary); }
+  .toc li a:hover { color:var(--az-link); }
+
+  /* ── Inline config field (contextual, within steps) ── */
+  .inline-config { background:var(--info-bg); border:1px solid var(--info-border); border-radius:8px; padding:.75rem 1rem; margin:.75rem 0; }
+  .inline-config .ic-title { font-size:.8rem; font-weight:700; color:var(--info-border); margin-bottom:.5rem; }
+  .inline-config .ic-fields { display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem; }
+  .inline-config .ic-field { display:flex; flex-direction:column; gap:.2rem; }
+  .inline-config .ic-field.full { grid-column:1/-1; }
+  .inline-config label { font-size:.7rem; font-weight:600; color:var(--slate-500); text-transform:uppercase; letter-spacing:.03em; }
+  .inline-config input { font-family:var(--mono); font-size:.8rem; padding:.4rem .5rem; border:1px solid var(--az-border); border-radius:4px; background:var(--az-card-bg); color:var(--az-text); width:100%; }
+  .inline-config input:focus { outline:none; border-color:var(--az-link); box-shadow:0 0 0 2px rgba(204,36,195,.15); }
+  .inline-config input::placeholder { color:var(--slate-400); }
+  .inline-config .ic-hint { font-size:.75rem; color:var(--slate-500); margin-top:.25rem; }
+  @media (max-width:640px) { .inline-config .ic-fields { grid-template-columns:1fr; } }
+
+  /* ── Simulated terminal ── */
+  .sim-terminal { background:#0d0a00; border-radius:8px; margin:.5rem 0 .75rem; overflow:hidden; font-family:var(--mono); font-size:.78rem; }
+  .sim-terminal-bar { background:#1e1b10; padding:.35rem .75rem; display:flex; align-items:center; gap:.4rem; }
+  .sim-terminal-dot { width:8px; height:8px; border-radius:50%; }
+  .sim-terminal-dot.red { background:#ff5f57; }
+  .sim-terminal-dot.yellow { background:#febc2e; }
+  .sim-terminal-dot.green { background:#28c840; }
+  .sim-terminal-title { color:var(--slate-400); font-size:.7rem; margin-left:.5rem; }
+  .sim-terminal-body { padding:.75rem 1rem; color:#a9cc1f; white-space:pre-wrap; line-height:1.6; min-height:60px; position:relative; }
+  .sim-terminal-body .prompt { color:var(--az-link); }
+  .sim-terminal-body .cmd { color:var(--code-text); }
+  .sim-terminal-body .output { color:#a9cc1f; }
+  .sim-terminal-body .cursor { display:inline-block; width:7px; height:14px; background:var(--code-text); animation:blink 1s step-end infinite; vertical-align:text-bottom; }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+  .sim-play-btn { position:absolute; top:.5rem; right:.5rem; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:var(--code-text); font-family:var(--sans); font-size:.7rem; padding:.25rem .5rem; border-radius:4px; cursor:pointer; }
+  .sim-play-btn:hover { background:rgba(255,255,255,.2); }
+
+  /* ── Prose-to-Code highlighting ── */
+  [data-hl] { transition: background .15s, outline .15s; border-radius:3px; cursor:default; }
+  [data-hl].hl-active { outline:2px solid var(--az-link); outline-offset:1px; }
+  pre [data-hl].hl-active { background:rgba(204,36,195,.25); outline:none; border-radius:2px; }
+  .detail-body [data-hl].hl-active { background:rgba(204,36,195,.12); }
+
+  /* ── Command palette ── */
+  .cmd-palette-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; display:none; align-items:flex-start; justify-content:center; padding-top:15vh; }
+  .cmd-palette-overlay.open { display:flex; }
+  .cmd-palette { background:var(--az-card-bg); border:1px solid var(--az-border); border-radius:12px; width:min(520px,90vw); box-shadow:0 16px 48px rgba(0,0,0,.2); overflow:hidden; }
+  .cmd-palette-input { width:100%; border:none; outline:none; padding:.85rem 1rem; font-family:var(--sans); font-size:.95rem; background:transparent; color:var(--az-text); }
+  .cmd-palette-input::placeholder { color:var(--slate-400); }
+  .cmd-palette-list { max-height:320px; overflow-y:auto; border-top:1px solid var(--az-border); }
+  .cmd-palette-item { padding:.6rem 1rem; cursor:pointer; display:flex; align-items:center; gap:.6rem; font-size:.85rem; color:var(--az-text-secondary); }
+  .cmd-palette-item:hover, .cmd-palette-item.selected { background:var(--info-bg); color:var(--az-text); }
+  .cmd-palette-item .cp-num { display:inline-flex; align-items:center; justify-content:center; width:1.4rem; height:1.4rem; background:var(--az-link); color:#fff; border-radius:50%; font-size:.7rem; font-weight:700; flex-shrink:0; }
+  .cmd-palette-item .cp-label { flex:1; }
+  .cmd-palette-item .cp-time { font-size:.7rem; color:var(--slate-400); }
+  .cmd-palette-empty { padding:1.5rem 1rem; text-align:center; color:var(--slate-400); font-size:.85rem; }
+  .cmd-palette-hint { font-size:.7rem; color:var(--slate-400); padding:.4rem 1rem; border-top:1px solid var(--az-border); text-align:center; }
+  .kbd { display:inline-block; font-family:var(--sans); font-size:.65rem; font-weight:600; background:var(--az-bg); border:1px solid var(--az-border); border-radius:3px; padding:.1rem .35rem; color:var(--slate-500); line-height:1.2; vertical-align:middle; }
+
+  /* ── Escape hatch ── */
+  .escape { display:flex; gap:1rem; margin-top:.75rem; font-size:.78rem; }
+  .escape a { color:var(--slate-400); }
+  .escape a:hover { color:var(--az-link); }
+
+  /* ── Section divider ── */
+  .section-divider { border:none; border-top:2px solid var(--az-border); margin:2.5rem 0; }
+
+  /* ── Print ── */
+  @media print {
+    #progress-bar, .copy-btn, .net-toggle, .config-panel, .escape, .gate, .config-actions { display:none; }
+    details[open] .detail-body { display:block; }
+    body { padding:0; max-width:100%; background:#fff; }
+    pre { white-space:pre-wrap; font-size:.7rem; }
+    .step-section { break-inside:avoid; }
+  }
+
+  @media (max-width:640px) {
+    body { padding:1rem 1rem 3rem; }
+    h1 { font-size:1.5rem; }
+    pre { font-size:.75rem; padding:.75rem; }
+    .config-body { grid-template-columns:1fr; }
+    #progress-bar { margin:-1rem -1rem 1rem; padding-left:1rem; padding-right:1rem; }
+    .term:hover::after { left:0; transform:none; max-width:200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  PROGRESS BAR                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="progress-bar">
+  <span class="label"><span id="progress-count">0</span> / <span id="progress-total">0</span></span>
+  <div class="bar"><div class="bar-fill" id="progress-fill" style="width:0%"></div></div>
+  <span class="label" id="progress-pct">0%</span>
+</div>
+
+<h1>Aztec Sequencer: Zero to Proposing Blocks</h1>
+<p class="subtitle">One-pager runbook &mdash; from bare server to running <span class="term" data-def="A sequencer orders transactions, produces blocks, participates in consensus, and earns AZTEC rewards.">sequencer</span> without leaving this page.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  NETWORK TOGGLE                                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="net-toggle">
+  <label>Network</label>
+  <span class="net-label testnet" id="net-label-left">TESTNET</span>
+  <label class="toggle-switch">
+    <input type="checkbox" id="net-toggle" onchange="toggleNetwork(this.checked)">
+    <span class="toggle-slider"></span>
+  </label>
+  <span class="net-label mainnet" id="net-label-right">MAINNET</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  CONFIG PANEL                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="config-panel" id="config-panel">
+  <div class="config-header" onclick="toggleConfig()">
+    <h3>&#9881; Your Configuration</h3>
+    <span class="toggle" id="config-toggle">&#9660; COLLAPSE</span>
+  </div>
+  <div class="config-desc">Enter your values below. All code snippets on this page will auto-populate with your inputs for one-click copy/paste.</div>
+  <div class="config-body" id="config-body">
+    <div class="config-field">
+      <label>L1 Execution RPC</label>
+      <input type="text" id="cfg-ETH_RPC" placeholder="https://eth-sepolia.g.alchemy.com/v2/..." data-tpl="ETH_RPC" data-ph-testnet="https://eth-sepolia.g.alchemy.com/v2/..." data-ph-mainnet="https://eth-mainnet.g.alchemy.com/v2/...">
+    </div>
+    <div class="config-field">
+      <label>L1 Consensus RPC</label>
+      <input type="text" id="cfg-CONSENSUS_RPC" placeholder="http://localhost:5052" data-tpl="CONSENSUS_RPC" data-ph-testnet="http://localhost:5052" data-ph-mainnet="http://localhost:5052">
+    </div>
+    <div class="config-field">
+      <label>L1 Debug/Trace RPC</label>
+      <input type="text" id="cfg-DEBUG_RPC" placeholder="https://eth-sepolia.g.alchemy.com/v2/..." data-tpl="DEBUG_RPC" data-ph-testnet="https://eth-sepolia.g.alchemy.com/v2/..." data-ph-mainnet="https://eth-mainnet.g.alchemy.com/v2/...">
+    </div>
+    <div class="config-field">
+      <label>External IP (P2P)</label>
+      <input type="text" id="cfg-P2P_IP" placeholder="203.0.113.42" data-tpl="P2P_IP">
+    </div>
+    <hr class="config-sep">
+    <div class="config-field">
+      <label>Publisher Private Key</label>
+      <div style="display:flex; gap:.25rem;">
+        <input type="password" id="cfg-PUBLISHER_KEY" placeholder="0x7988a4a7..." data-tpl="PUBLISHER_KEY" style="flex:1;">
+        <button class="pw-toggle" onclick="togglePwField('cfg-PUBLISHER_KEY', this)">Show</button>
+      </div>
+    </div>
+    <div class="config-field">
+      <label>Attester Address</label>
+      <input type="text" id="cfg-ATTESTER_ADDR" placeholder="0x... (from key1_staker_output.json)" data-tpl="ATTESTER_ADDR">
+    </div>
+    <div class="config-field">
+      <label>Publisher Address</label>
+      <input type="text" id="cfg-PUBLISHER_ADDR" placeholder="0x... (from cast wallet address)" data-tpl="PUBLISHER_ADDR">
+    </div>
+    <div class="config-field">
+      <label>Coinbase Address</label>
+      <input type="text" id="cfg-COINBASE_ADDR" placeholder="0x... (receives rewards)" data-tpl="COINBASE_ADDR">
+    </div>
+  </div>
+  <div class="config-security">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span><strong>Keys and RPC URLs use session-only storage</strong> &mdash; they are erased when you close this tab. Addresses and checkboxes persist between sessions. Nothing is ever sent to any server.</span>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  TOC                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<nav class="toc">
+  <div style="display:flex; align-items:center; justify-content:space-between;">
+    <h3>Roadmap</h3>
+    <span style="font-size:.75rem; color:var(--slate-400);">Jump to any step: <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">K</kbd></span>
+  </div>
+  <ol>
+    <li><a href="#step-0">Pre-flight Checklist</a> <span style="color:var(--slate-400); font-size:.75rem;">2 min</span></li>
+    <li><a href="#step-1">Install Aztec Toolchain</a> <span style="color:var(--slate-400); font-size:.75rem;">2 min</span></li>
+    <li><a href="#step-2">Generate Keystore</a> <span style="color:var(--slate-400); font-size:.75rem;">5 min</span></li>
+    <li><a href="#step-3">Fund Your Accounts</a> <span style="color:var(--slate-400); font-size:.75rem;">5 min</span></li>
+    <li><a href="#step-4">Configure Environment</a> <span style="color:var(--slate-400); font-size:.75rem;">5 min</span></li>
+    <li><a href="#step-5">Create Docker Compose</a> <span style="color:var(--slate-400); font-size:.75rem;">3 min</span></li>
+    <li><a href="#step-6">Start the Node</a> <span style="color:var(--slate-400); font-size:.75rem;">5&ndash;15 min</span></li>
+    <li><a href="#step-7">Register as Sequencer</a> <span style="color:var(--slate-400); font-size:.75rem;">10 min</span></li>
+    <li><a href="#step-8">Verify Everything Works</a> <span style="color:var(--slate-400); font-size:.75rem;">5 min</span></li>
+    <li><a href="#step-9">Day-2 Essentials</a> <span style="color:var(--slate-400); font-size:.75rem;">5 min read</span></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 0: PRE-FLIGHT                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-0">
+  <div class="step-title">
+    <span class="step-num" id="sn-0">0</span>
+    <h2>Pre-flight Checklist</h2>
+    <span class="step-time">~2 min</span>
+  </div>
+
+  <p>Confirm you have everything before starting. Every item is required.</p>
+
+  <h3>Hardware</h3>
+  <div class="check-row"><input type="checkbox" id="c-0a"><label for="c-0a"><strong>CPU:</strong> 8 cores / 16 vCPU (2015 or later)</label></div>
+  <div class="check-row"><input type="checkbox" id="c-0b"><label for="c-0b"><strong>RAM:</strong> 16 GB minimum</label></div>
+  <div class="check-row"><input type="checkbox" id="c-0c"><label for="c-0c"><strong>Storage:</strong> 1 TB NVMe SSD</label></div>
+  <div class="check-row"><input type="checkbox" id="c-0d"><label for="c-0d"><strong>Network:</strong> 25 Mbps+ with a static public IP</label></div>
+
+  <h3>Software</h3>
+  <div class="check-row"><input type="checkbox" id="c-0e"><label for="c-0e"><strong>OS:</strong> Any Unix system (Ubuntu 22.04+, Debian 12+, macOS)
+    <div class="hint">Windows WSL2 also works but is not recommended for production.</div></label></div>
+  <div class="check-row"><input type="checkbox" id="c-0f"><label for="c-0f"><strong>Docker + Docker Compose:</strong> installed and running
+    <div class="hint">Run <code>docker --version && docker compose version</code> to verify.</div></label></div>
+  <div class="check-row"><input type="checkbox" id="c-0f2"><label for="c-0f2"><strong>jq:</strong> JSON processor (used in verification commands)
+    <div class="hint">Install: <code>sudo apt install -y jq</code> (Ubuntu/Debian) or <code>brew install jq</code> (macOS). Verify: <code>jq --version</code></div></label></div>
+
+  <details class="trouble">
+    <summary>Need to install Docker?</summary>
+    <div class="detail-body">
+      <strong>Ubuntu / Debian:</strong>
+      <pre><code><span class="comment"># Add Docker's official GPG key and repo</span>
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli \
+  containerd.io docker-compose-plugin
+
+<span class="comment"># Allow running docker without sudo</span>
+sudo usermod -aG docker $USER
+newgrp docker</code></pre>
+      <strong>macOS:</strong> Install <a href="https://docs.docker.com/desktop/install/mac-install/" target="_blank">Docker Desktop for Mac</a>.<br><br>
+      <strong>Verify:</strong> <code>docker run hello-world</code>
+    </div>
+  </details>
+
+  <h3>Network access</h3>
+  <div class="check-row"><input type="checkbox" id="c-0g"><label for="c-0g"><strong>L1 Ethereum endpoints:</strong> Execution client RPC + Consensus client RPC
+    <div class="hint">Self-hosted (Geth + Prysm/Lighthouse) or third-party (Alchemy, Infura, QuickNode). Must support high throughput.</div></label></div>
+  <div class="check-row"><input type="checkbox" id="c-0h"><label for="c-0h"><strong>Port 40400</strong> open for both TCP and UDP (P2P)</label></div>
+  <div class="check-row"><input type="checkbox" id="c-0i"><label for="c-0i"><strong>Port 8080</strong> available locally (Aztec HTTP API &mdash; do NOT expose publicly)</label></div>
+
+  <h3>Tokens</h3>
+  <div class="check-row"><input type="checkbox" id="c-0j"><label for="c-0j"><strong><span class="show-testnet">Testnet</span><span class="show-mainnet">Mainnet</span> AZTEC tokens:</strong> <span class="term" data-def="The minimum number of AZTEC tokens that must be staked (self or delegated) to register as a sequencer.">200,000 AZTEC minimum stake</span></label></div>
+  <div class="check-row"><input type="checkbox" id="c-0k"><label for="c-0k"><strong>ETH for gas:</strong> 0.1 ETH minimum in your <span class="term" data-def="The account that pays L1 gas fees when your sequencer publishes blocks to Ethereum. Must be funded with ETH.">publisher account</span> (0.1 ETH per <span class="term" data-def="An attester validates proposed blocks by producing BLS attestation signatures. Each attester needs one ETH key and one BLS key.">attester</span>)</label></div>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">You've confirmed your server meets Aztec's minimum requirements. The node runs as a Docker container that connects to Ethereum L1 (for anchoring proofs and reading rollup state) and the Aztec P2P network (for receiving transactions and participating in consensus). The 200K AZTEC stake is required by the <span class="term" data-def="The L1 smart contract that manages sequencer registration, staking, committees, and block validation.">Rollup contract</span> to prevent Sybil attacks.</div>
+  </details>
+
+  <div class="escape">
+    <a href="https://docs.aztec.network/operate/operators/prerequisites" target="_blank">Full prerequisites docs &rarr;</a>
+    <a href="https://discord.com/channels/1144692727120937080/1435605587017859072" target="_blank">Stuck? Discord #mn-sequencer-technical &rarr;</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 1: INSTALL TOOLCHAIN                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-1">
+  <div class="step-title">
+    <span class="step-num" id="sn-1">1</span>
+    <h2>Install Aztec Toolchain</h2>
+    <span class="step-time">~2 min</span>
+  </div>
+
+  <p>The Aztec CLI is needed to generate validator keys and interact with L1 contracts.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-1a"><label for="c-1a">Install the Aztec toolchain:</label></div>
+  <pre><code>bash -i &lt;(curl -sL https://install.aztec.network)</code></pre>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#128161;</span>
+    <div>After installation, restart your shell or run <code>source ~/.bashrc</code> to pick up the new <code>aztec</code> command.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-1b"><label for="c-1b">Verify installation:</label></div>
+  <pre><code>aztec --version</code></pre>
+  <div class="sim-terminal">
+    <div class="sim-terminal-bar"><span class="sim-terminal-dot red"></span><span class="sim-terminal-dot yellow"></span><span class="sim-terminal-dot green"></span><span class="sim-terminal-title">Expected output</span></div>
+    <div class="sim-terminal-body" id="sim-version" data-lines='["$ aztec --version","aztec v2.1.11"]'>
+      <span class="prompt">$ </span><span class="cmd">aztec --version</span>
+<span class="output">aztec v2.1.11</span>
+      <button class="sim-play-btn" onclick="playTerminal('sim-version')">&#9654; Replay</button>
+    </div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-1c"><label for="c-1c">Install Foundry (for contract queries later):</label></div>
+  <pre><code>curl -L https://foundry.paradigm.xyz | bash && foundryup</code></pre>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">You installed two tools:<br><strong>aztec CLI</strong> &mdash; generates BLS + ECDSA keypairs for your sequencer, and can register your validator on L1.<br><strong>Foundry (cast)</strong> &mdash; a CLI for interacting with Ethereum smart contracts. You'll use <code>cast call</code> to check your sequencer status and <code>cast send</code> to claim rewards.</div>
+  </details>
+
+  <details class="trouble">
+    <summary>Something wrong?</summary>
+    <div class="detail-body">
+      <strong>"command not found: aztec"</strong> &mdash; Run <code>source ~/.bashrc</code> or <code>source ~/.zshrc</code>. The installer adds <code>~/.aztec/bin</code> to your PATH.<br><br>
+      <strong>curl fails</strong> &mdash; Check your firewall allows HTTPS. Try: <code>curl -I https://install.aztec.network</code>
+    </div>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 2: GENERATE KEYSTORE                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-2">
+  <div class="step-title">
+    <span class="step-num" id="sn-2">2</span>
+    <h2>Generate Keystore</h2>
+    <span class="step-time">~5 min</span>
+  </div>
+
+  <p>Generate the cryptographic keys your sequencer needs: an <span class="term" data-def="An ECDSA (Ethereum) + BLS keypair that signs attestations for proposed blocks. Identifies your sequencer on the network.">attester key</span>, a <span class="term" data-def="The Ethereum account that publishes blocks and proofs to L1. Pays gas fees.">publisher key</span>, and a <span class="term" data-def="BLS (Boneh-Lynn-Shacham) signatures allow aggregating multiple validator signatures into one, reducing L1 gas costs.">BLS key</span> for attestations.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-2a"><label for="c-2a">Generate a publisher mnemonic (24 words):</label></div>
+  <pre><code>cast wallet new-mnemonic --words 24</code></pre>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">&#9888;</span>
+    <div><strong>Write down both mnemonics on paper or store safely on another medium.</strong> The 24-word publisher mnemonic and the 12-word attestation key mnemonic (generated next) are the <em>only way</em> to recover your keys. Never store them on the server running the node.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-2b"><label for="c-2b">Derive a publisher private key from the mnemonic:</label></div>
+  <pre><code>cast wallet derive-key "your 24 word mnemonic phrase here"</code></pre>
+  <p class="hint">Copy the private key (0x...) and paste it into the <strong>Publisher Private Key</strong> field in the Config panel above.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-2c"><label for="c-2c">Generate the validator keystore:</label></div>
+  <pre><code class="tpl">aztec validator-keys new \
+  --fee-recipient 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --staker-output \
+  --gse-address <span class="show-testnet">0xb6a38a51a6c1de9012f9d8ea9745ef957212eaac</span><span class="show-mainnet">0xa92ecFD0E70c9cd5E5cd76c50Af0F7Da93567a4f</span> \
+  --l1-rpc-urls {{ETH_RPC}} \
+  --publishers {{PUBLISHER_KEY}}</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#8505;</span>
+    <div>This generates two files in <code>~/.aztec/keystore/</code>:<br>
+    <strong>key1.json</strong> &mdash; private keystore (never share, never commit to git)<br>
+    <strong>key1_staker_output.json</strong> &mdash; public keystore (safe to share, needed for registration)</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-2d"><label for="c-2d">Verify the keystore was created:</label></div>
+  <pre><code>cat ~/.aztec/keystore/key1.json | jq .</code></pre>
+  <div class="expected-label">Expected output (structure)</div>
+  <div class="expected">{
+  "schemaVersion": 1,
+  "validators": [{
+    "attester": { "eth": "0x...", "bls": "0x..." },
+    "publisher": ["0x..."],
+    "feeRecipient": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "coinbase": "0x..."
+  }]
+}</div>
+
+  <div class="check-row"><input type="checkbox" id="c-2e"><label for="c-2e">Extract your attester address:</label></div>
+  <pre><code>jq -r '.attester' ~/.aztec/keystore/key1_staker_output.json</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-2f"><label for="c-2f">Extract your publisher address:</label></div>
+  <pre><code>jq -r '.validators[0].publisher[0]' ~/.aztec/keystore/key1.json | xargs cast wallet address --private-key</code></pre>
+
+  <div class="inline-config">
+    <div class="ic-title">&#9998; Paste your addresses here (auto-fills all commands below)</div>
+    <div class="ic-fields">
+      <div class="ic-field">
+        <label>Attester Address</label>
+        <input type="text" id="ic-ATTESTER_ADDR" placeholder="0x... (from key1_staker_output.json)" data-sync="cfg-ATTESTER_ADDR">
+      </div>
+      <div class="ic-field">
+        <label>Publisher Address</label>
+        <input type="text" id="ic-PUBLISHER_ADDR" placeholder="0x... (from cast wallet address)" data-sync="cfg-PUBLISHER_ADDR">
+      </div>
+    </div>
+    <div class="ic-hint">These sync with the Config panel at the top &mdash; fill them in either place.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-2g"><label for="c-2g">Save both mnemonics securely offline (paper, hardware wallet backup, encrypted vault)</label></div>
+
+  <!-- GATE -->
+  <div class="gate" id="gate-2">
+    <div class="gate-title">&#9989; Before continuing, confirm:</div>
+    <div class="check-row"><input type="checkbox" id="g-2a" class="gate-check" data-gate="gate-2"><label for="g-2a">Both mnemonics saved securely offline</label></div>
+    <div class="check-row"><input type="checkbox" id="g-2b" class="gate-check" data-gate="gate-2"><label for="g-2b"><code>key1.json</code> and <code>key1_staker_output.json</code> exist in <code>~/.aztec/keystore/</code></label></div>
+    <div class="check-row"><input type="checkbox" id="g-2c" class="gate-check" data-gate="gate-2"><label for="g-2c">Attester Address and Publisher Address filled in above</label></div>
+  </div>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">You created 3 types of cryptographic keys:<br>
+    <strong>Attester ETH key</strong> &mdash; an ECDSA key that identifies your sequencer on the network. This address gets registered in the Rollup contract.<br>
+    <strong>Attester BLS key</strong> &mdash; a BLS12-381 key used to sign block attestations. BLS signatures can be aggregated, which saves L1 gas when the <span class="term" data-def="A randomly selected subset of sequencers that validates a proposed block. Requires 2/3 + 1 attestation signatures.">committee</span> confirms a block.<br>
+    <strong>Publisher key</strong> &mdash; an Ethereum account that pays L1 gas when your node publishes blocks. Keep it funded with ETH.<br><br>
+    The <code>--gse-address</code> points to the <span class="term" data-def="Governance Staking Escrow &mdash; the L1 contract that manages validator registration and staking.">GSE contract</span> which differs between testnet and mainnet.</div>
+  </details>
+
+  <details class="trouble">
+    <summary>Something wrong?</summary>
+    <div class="detail-body">
+      <strong>"Error: could not connect to RPC"</strong> &mdash; Your L1 RPC URL may be wrong or rate-limited. Test with: <code>cast block-number --rpc-url YOUR_URL</code><br><br>
+      <strong>jq shows empty validators array</strong> &mdash; Re-run the command. Ensure <code>--publishers</code> has a valid private key (with 0x prefix).
+    </div>
+  </details>
+
+  <div class="escape">
+    <a href="https://docs.aztec.network/operate/operators/keystore" target="_blank">Full keystore docs &rarr;</a>
+    <a href="https://discord.com/channels/1144692727120937080/1435605587017859072" target="_blank">Stuck? Discord #mn-sequencer-technical &rarr;</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 3: FUND ACCOUNTS                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-3">
+  <div class="step-title">
+    <span class="step-num" id="sn-3">3</span>
+    <h2>Fund Your Accounts</h2>
+    <span class="step-time">~5 min</span>
+  </div>
+
+  <p>Your publisher account needs ETH for L1 gas, and your staker account needs AZTEC tokens for the stake.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-3b"><label for="c-3b"><strong>Send ETH to your publisher address:</strong> minimum 0.1 ETH per attester
+    <div class="hint">With 1 attester and 1 publisher, send at least 0.1 ETH. This covers L1 gas for block publication.</div></label></div>
+
+  <div class="callout callout-warning">
+    <span class="callout-icon">&#9888;</span>
+    <div><strong>Monitor publisher balance.</strong> If it runs dry, your sequencer can't publish blocks and you'll miss attestation rewards. Keep at least 0.1 ETH at all times.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-3c"><label for="c-3c"><strong>Ensure 200,000 AZTEC tokens</strong> are available in your staking wallet (self-stake or delegated)</label></div>
+
+  <div class="cost-panel">
+    <h3>Estimated Costs</h3>
+    <div class="cost-row"><span>AZTEC stake (minimum)</span><span>200,000 AZTEC</span></div>
+    <div class="cost-row"><span>Publisher ETH (per attester)</span><span>0.1 ETH</span></div>
+    <div class="cost-row"><span>Registration gas</span><span>~0.01 ETH</span></div>
+    <div class="cost-row"><span>Monthly gas (estimated)</span><span>~0.05&ndash;0.2 ETH</span></div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-3d"><label for="c-3d">Verify publisher balance:</label></div>
+  <pre><code class="tpl">cast balance {{PUBLISHER_ADDR}} --rpc-url {{ETH_RPC}} --ether</code></pre>
+
+  <div class="inline-config">
+    <div class="ic-title">&#9998; Set your reward address</div>
+    <div class="ic-fields">
+      <div class="ic-field full">
+        <label>Coinbase Address (receives rewards)</label>
+        <input type="text" id="ic-COINBASE_ADDR" placeholder="0x... (any ETH address you control)" data-sync="cfg-COINBASE_ADDR">
+      </div>
+    </div>
+    <div class="ic-hint">The coinbase address receives L2 fee rewards. Can be any address you control &mdash; doesn't need to be the publisher or attester.</div>
+  </div>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">The 200K AZTEC stake is locked in the <span class="term" data-def="The L1 smart contract that manages sequencer registration, staking, committees, and block validation.">Rollup contract</span> when you register. It serves as economic security &mdash; if your sequencer misbehaves (double-signing, liveness failures), a portion can be <span class="term" data-def="Penalty for misbehaving validators. Aztec uses a Tally Model with 6 offense types, each with different severity.">slashed</span>. The publisher ETH is consumed as L1 gas every time your node submits a block proof or attestation to Ethereum.</div>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 4: CONFIGURE ENVIRONMENT                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-4">
+  <div class="step-title">
+    <span class="step-num" id="sn-4">4</span>
+    <h2>Configure Environment</h2>
+    <span class="step-time">~5 min</span>
+  </div>
+
+  <p>Create the project directory and a single <code>.env</code> file with all configuration.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-4a"><label for="c-4a">Create directory structure:</label></div>
+  <pre><code>mkdir -p aztec-node/data && cd aztec-node</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-4b"><label for="c-4b">Copy your keystore into the project:</label></div>
+  <pre><code>cp -r ~/.aztec/keystore ./keys</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-4c"><label for="c-4c">Create the <code>.env</code> file with all variables:</label></div>
+  <pre><code class="tpl"><span class="comment"># ── Aztec Sequencer Configuration ──</span>
+
+<span class="comment"># Data &amp; Keys</span>
+<span data-hl="env-data">DATA_DIRECTORY=./data</span>
+<span data-hl="env-keys">KEY_STORE_DIRECTORY=./keys</span>
+LOG_LEVEL=info
+
+<span class="comment"># Ethereum L1 endpoints</span>
+<span data-hl="env-eth">ETHEREUM_HOSTS={{ETH_RPC}}</span>
+<span data-hl="env-consensus">L1_CONSENSUS_HOST_URLS={{CONSENSUS_RPC}}</span>
+<span data-hl="env-debug">ETHEREUM_DEBUG_HOSTS={{DEBUG_RPC}}</span>
+
+<span class="comment"># P2P networking</span>
+<span data-hl="env-p2pip">P2P_IP={{P2P_IP}}</span>
+<span data-hl="env-p2pport">P2P_PORT=40400</span>
+
+<span class="comment"># Aztec ports</span>
+AZTEC_PORT=8080
+AZTEC_ADMIN_PORT=8880</code></pre>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#128161;</span>
+    <div>Don't know your external IP? Run: <code>curl ipv4.icanhazip.com</code></div>
+  </div>
+
+  <div class="callout callout-warning">
+    <span class="callout-icon">&#9888;</span>
+    <div><strong>Never expose port 8880 (admin port) to the internet.</strong> It provides unauthenticated access to node configuration. It is intentionally not mapped in Docker Compose.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-4d"><label for="c-4d">Save the <code>.env</code> file, or download it pre-filled:</label></div>
+  <button onclick="exportEnv()" style="font-family:var(--sans); font-size:.8rem; padding:.4rem 1rem; border-radius:6px; cursor:pointer; border:1px solid var(--az-link); background:var(--az-card-bg); color:var(--az-link); font-weight:600; margin:.25rem 0 .5rem;">Download .env file</button>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">
+    <span data-hl="env-data"><strong>DATA_DIRECTORY</strong> &mdash; where the node stores blockchain data (will grow over time).</span><br>
+    <span data-hl="env-keys"><strong>KEY_STORE_DIRECTORY</strong> &mdash; path to your validator keystore (the <code>key1.json</code> file).</span><br>
+    <span data-hl="env-eth"><strong>ETHEREUM_HOSTS</strong> &mdash; your L1 execution client. The node reads rollup contract state and submits proofs here.</span><br>
+    <span data-hl="env-consensus"><strong>L1_CONSENSUS_HOST_URLS</strong> &mdash; your L1 consensus client (Beacon API). Needed for blob data access.</span><br>
+    <span data-hl="env-debug"><strong>ETHEREUM_DEBUG_HOSTS</strong> &mdash; a trace-capable endpoint (debug_traceTransaction). Some providers charge extra for this.</span><br>
+    <span data-hl="env-p2pip"><strong>P2P_IP</strong> &mdash; your server's public IP so other nodes can connect to you.</span><br>
+    <span data-hl="env-p2pport"><strong>P2P_PORT 40400</strong> &mdash; the port for peer-to-peer communication (TCP + UDP). Must be forwarded through your firewall.</span>
+    </div>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 5: DOCKER COMPOSE                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-5">
+  <div class="step-title">
+    <span class="step-num" id="sn-5">5</span>
+    <h2>Create Docker Compose</h2>
+    <span class="step-time">~3 min</span>
+  </div>
+
+  <p>Create a <code>docker-compose.yml</code> file in your <code>aztec-node/</code> directory.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-5a"><label for="c-5a">Create <code>docker-compose.yml</code>:</label></div>
+  <pre><code class="tpl">services:
+  aztec-node:
+    image: "aztecprotocol/aztec:<span class="show-testnet">latest</span><span class="show-mainnet">2.1.11</span>"
+    container_name: "aztec-sequencer"
+    ports:
+      - "${AZTEC_PORT}:${AZTEC_PORT}"
+      <span data-hl="dc-p2p">- "${P2P_PORT}:${P2P_PORT}"
+      - "${P2P_PORT}:${P2P_PORT}/udp"</span>
+    <span data-hl="dc-volumes">volumes:
+      - ${DATA_DIRECTORY}:/var/lib/data
+      - ${KEY_STORE_DIRECTORY}:/var/lib/keys:ro</span>
+    environment:
+      DATA_DIRECTORY: /var/lib/data
+      KEY_STORE_DIRECTORY: /var/lib/keys
+      LOG_LEVEL: ${LOG_LEVEL}
+      ETHEREUM_HOSTS: ${ETHEREUM_HOSTS}
+      L1_CONSENSUS_HOST_URLS: ${L1_CONSENSUS_HOST_URLS}
+      ETHEREUM_DEBUG_HOSTS: ${ETHEREUM_DEBUG_HOSTS}
+      P2P_IP: ${P2P_IP}
+      P2P_PORT: ${P2P_PORT}
+      AZTEC_PORT: ${AZTEC_PORT}
+      AZTEC_ADMIN_PORT: ${AZTEC_ADMIN_PORT}
+    <span data-hl="dc-entrypoint">entrypoint: >-
+      node
+      --no-warnings
+      /usr/src/yarn-project/aztec/dest/bin/index.js
+      start
+      --node
+      --archiver
+      --sequencer
+      --network <span class="show-testnet">ignition</span><span class="show-mainnet">ignition</span></span>
+    networks:
+      - aztec
+    <span data-hl="dc-restart">restart: always</span>
+
+networks:
+  aztec:
+    name: aztec</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#8505;</span>
+    <div>Key differences from a plain full node: <code>--sequencer</code> flag is added to the entrypoint, and the keystore directory is mounted read-only (<code>:ro</code>). The admin port (8880) is intentionally <strong>not</strong> mapped to the host.</div>
+  </div>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">
+    The Docker Compose file defines a single container running the Aztec node with the sequencer module enabled. Key points:<br><br>
+    <span data-hl="dc-entrypoint"><strong>--node --archiver --sequencer</strong> &mdash; runs all three modules in one process. The archiver indexes L1 data, the node syncs state, and the sequencer participates in consensus.</span><br>
+    <span data-hl="dc-p2p"><strong>P2P_PORT</strong> &mdash; mapped for both TCP and UDP. Aztec uses libp2p which needs both.</span><br>
+    <span data-hl="dc-volumes"><strong>volumes</strong> &mdash; data is persisted to host so you don't re-sync after container restart. Keys are mounted read-only for security.</span><br>
+    <span data-hl="dc-restart"><strong>restart: always</strong> &mdash; auto-restarts on crash or server reboot.</span>
+    </div>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 6: START NODE                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-6">
+  <div class="step-title">
+    <span class="step-num" id="sn-6">6</span>
+    <h2>Start the Node</h2>
+    <span class="step-time">~5&ndash;15 min</span>
+  </div>
+
+  <p>Launch the container and wait for it to sync with the network.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-6a"><label for="c-6a">Start the node:</label></div>
+  <pre><code>docker compose up -d</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-6b"><label for="c-6b">Watch the logs (initial sync):</label></div>
+  <pre><code>docker compose logs -f aztec-node</code></pre>
+  <p class="hint">Press Ctrl+C to exit log view. The node continues running in the background.</p>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#8505;</span>
+    <div>Initial sync can take 5&ndash;30 minutes depending on your L1 endpoint speed and current chain height. You'll see blocks being processed in the logs. Wait until the node catches up to the current <span class="term" data-def="A block height on the Aztec L2 chain. The 'proven' tip is the latest block with a verified ZK proof submitted to L1.">proven tip</span>.</div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-6c"><label for="c-6c">Check sync progress (in a new terminal):</label></div>
+  <pre><code>curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}' \
+  http://localhost:8080 | jq -r ".result.proven.number"</code></pre>
+  <div class="sim-terminal">
+    <div class="sim-terminal-bar"><span class="sim-terminal-dot red"></span><span class="sim-terminal-dot yellow"></span><span class="sim-terminal-dot green"></span><span class="sim-terminal-title">Expected output</span></div>
+    <div class="sim-terminal-body" id="sim-sync" data-lines='["$ curl -s ... | jq -r \".result.proven.number\"","74891","","$ # wait a minute, then run again...","","$ curl -s ... | jq -r \".result.proven.number\"","75432  ← should increase and match network tip"]'>
+      <span class="prompt">$ </span><span class="cmd">curl -s ... | jq -r ".result.proven.number"</span>
+<span class="output">74891</span>
+
+<span class="comment"># wait a minute, then run again...</span>
+
+<span class="prompt">$ </span><span class="cmd">curl -s ... | jq -r ".result.proven.number"</span>
+<span class="output">75432</span>  <span class="comment">&larr; should increase and match network tip</span>
+      <button class="sim-play-btn" onclick="playTerminal('sim-sync')">&#9654; Replay</button>
+    </div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-6d"><label for="c-6d">Check node status:</label></div>
+  <pre><code>curl -s http://localhost:8080/status | jq .</code></pre>
+
+  <!-- GATE -->
+  <div class="gate" id="gate-6">
+    <div class="gate-title">&#9989; Before continuing, confirm:</div>
+    <div class="check-row"><input type="checkbox" id="g-6a" class="gate-check" data-gate="gate-6"><label for="g-6a">Node is synced (proven block number matches network tip)</label></div>
+    <div class="check-row"><input type="checkbox" id="g-6b" class="gate-check" data-gate="gate-6"><label for="g-6b"><code>/status</code> endpoint returns 200</label></div>
+    <div class="check-row"><input type="checkbox" id="g-6c" class="gate-check" data-gate="gate-6"><label for="g-6c">Logs show no persistent errors</label></div>
+  </div>
+
+  <details class="trouble">
+    <summary>Something wrong?</summary>
+    <div class="detail-body">
+      <strong>"Error connecting to Ethereum"</strong> &mdash; Check <code>ETHEREUM_HOSTS</code> in your <code>.env</code>. Test: <code>cast block-number --rpc-url YOUR_URL</code><br><br>
+      <strong>Node exits immediately</strong> &mdash; Run <code>docker compose logs aztec-node</code> (without -f) to see the exit reason. Common: invalid keystore path, port conflict, or Docker out of disk space.<br><br>
+      <strong>Sync stuck</strong> &mdash; Your L1 endpoints may be rate-limited. Consider self-hosting Geth+Prysm or using a higher-tier provider plan.<br><br>
+      <strong>P2P connection issues</strong> &mdash; Verify port forwarding: <code>nc -zv YOUR_IP 40400</code>. Check both TCP and UDP are forwarded.
+    </div>
+  </details>
+
+  <div class="escape">
+    <a href="https://docs.aztec.network/operate/operators/setup/running_a_node" target="_blank">Full node docs &rarr;</a>
+    <a href="https://discord.com/channels/1144692727120937080/1435605587017859072" target="_blank">Stuck? Discord #mn-sequencer-technical &rarr;</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 7: REGISTER                                               -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-7">
+  <div class="step-title">
+    <span class="step-num" id="sn-7">7</span>
+    <h2>Register as Sequencer</h2>
+    <span class="step-time">~10 min</span>
+  </div>
+
+  <p>Register your sequencer on L1 by staking AZTEC tokens via the Staking Dashboard or CLI.</p>
+
+  <h3>Option A: Staking Dashboard (recommended)</h3>
+
+  <div class="check-row"><input type="checkbox" id="c-7a"><label for="c-7a">Open the <a href="https://stake.aztec.network" target="_blank">Aztec Staking Dashboard</a></label></div>
+  <div class="check-row"><input type="checkbox" id="c-7b"><label for="c-7b">Connect your wallet (the account holding AZTEC tokens)</label></div>
+  <div class="check-row"><input type="checkbox" id="c-7c"><label for="c-7c">Select <strong>"Run your own Sequencer"</strong></label></div>
+  <div class="check-row"><input type="checkbox" id="c-7d"><label for="c-7d">Upload your public keystore file: <code>~/.aztec/keystore/key1_staker_output.json</code>
+    <div class="hint">This file contains only public information (attester address, BLS public keys). Safe to share.</div></label></div>
+  <div class="check-row"><input type="checkbox" id="c-7e"><label for="c-7e">Confirm the attester address and BLS public key match your keystore</label></div>
+  <div class="check-row"><input type="checkbox" id="c-7f"><label for="c-7f">Approve AZTEC token spending and execute the staking transaction</label></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#8505;</span>
+    <div>After staking, your sequencer enters a <strong>queue</strong>. It takes 1&ndash;2 <span class="term" data-def="A period of 32 blocks. Rewards are distributed per epoch, and committee selection happens at epoch boundaries.">epochs</span> before your sequencer becomes active and eligible for <span class="term" data-def="A randomly selected subset of sequencers chosen each epoch to validate proposed blocks.">committee</span> selection.</div>
+  </div>
+
+  <h3>Option B: CLI Registration</h3>
+  <p>If you prefer command-line registration, use the <code>aztec</code> CLI with your keystore and RPC endpoint. Refer to the <a href="https://docs.aztec.network/operate/operators/setup/registering_sequencer" target="_blank">full registration docs</a> for exact commands.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-7g"><label for="c-7g">Verify registration status:</label></div>
+  <pre><code class="tpl"><span class="comment"># First, get the Rollup address from the Registry</span>
+cast call <span class="show-testnet">0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba</span><span class="show-mainnet">0x35b22e09ee0390539439e24f06da43d83f90e298</span> \
+  "getCanonicalRollup()" --rpc-url {{ETH_RPC}}
+
+<span class="comment"># Then check your attester status (use Rollup address from above)</span>
+cast call <span class="show-testnet">0x5932FCb01B6f63550C8bd91055613752480B6455</span><span class="show-mainnet">0x603bb2c05d474794ea97805e8de69bccfb3bca12</span> \
+  "getAttesterView(address)" {{ATTESTER_ADDR}} \
+  --rpc-url {{ETH_RPC}}</code></pre>
+  <div class="expected-label">Status codes</div>
+  <div class="expected">NONE (0)       = not registered
+VALIDATING (1) = active sequencer
+ZOMBIE (2)     = inactive, pending exit
+EXITING (3)    = exit in progress</div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#128161;</span>
+    <div>You can also check your sequencer status at <a href="https://dashtec.xyz/queue" target="_blank">dashtec.xyz</a> &mdash; a community-built sequencer analytics dashboard.</div>
+  </div>
+
+  <h3>L1 Contract Addresses</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:.82rem; margin:.75rem 0;">
+    <tr style="background:rgba(0,0,0,.04);">
+      <th style="text-align:left; padding:.4rem .6rem; font-weight:600;">Contract</th>
+      <th style="text-align:left; padding:.4rem .6rem; font-weight:600;" class="show-testnet">Testnet (Sepolia)</th>
+      <th style="text-align:left; padding:.4rem .6rem; font-weight:600;" class="show-mainnet">Mainnet</th>
+    </tr>
+    <tr>
+      <td style="padding:.4rem .6rem;">Registry</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-testnet">0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-mainnet">0x35b22e09ee0390539439e24f06da43d83f90e298</td>
+    </tr>
+    <tr>
+      <td style="padding:.4rem .6rem;">Rollup</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-testnet">0x5932FCb01B6f63550C8bd91055613752480B6455</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-mainnet">0x603bb2c05d474794ea97805e8de69bccfb3bca12</td>
+    </tr>
+    <tr>
+      <td style="padding:.4rem .6rem;">GSE (Staking)</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-testnet">0xb6a38a51a6c1de9012f9d8ea9745ef957212eaac</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-mainnet">0xa92ecFD0E70c9cd5E5cd76c50Af0F7Da93567a4f</td>
+    </tr>
+    <tr>
+      <td style="padding:.4rem .6rem;">Slasher</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-testnet">0xb2Ef90642AdA70B8fcDDB7921794f06505724819</td>
+      <td style="padding:.4rem .6rem; font-family:var(--mono); font-size:.75rem;" class="show-mainnet">0x91a3745c685c220595b997e53311ebf660144889</td>
+    </tr>
+  </table>
+  <p class="hint">Full list: <a href="https://docs.aztec.network/networks" target="_blank">docs.aztec.network/networks</a></p>
+
+  <details class="why">
+    <summary>What just happened?</summary>
+    <div class="detail-body">You registered your attester address and BLS public key in the L1 <span class="term" data-def="The L1 smart contract that manages sequencer registration, staking, committees, and block validation.">Rollup contract</span>. The contract locked 200K AZTEC tokens as your stake. Your sequencer is now in the validator queue. Once processed (1&ndash;2 epochs), you'll start being selected for <span class="term" data-def="A randomly selected subset of sequencers that validates a proposed block. Requires 2/3 + 1 attestation signatures.">committees</span>. When selected, your node will attest to proposed blocks and occasionally propose blocks itself. Rewards accrue to your <span class="term" data-def="The Ethereum address that receives L2 fee rewards and can claim accumulated rewards from the Rollup contract.">coinbase address</span> each epoch (70% to sequencers, 30% to provers).</div>
+  </details>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 8: VERIFY                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-8">
+  <div class="step-title">
+    <span class="step-num" id="sn-8">8</span>
+    <h2>Verify Everything Works</h2>
+    <span class="step-time">~5 min</span>
+  </div>
+
+  <p>Run through this 5-point health check to confirm your sequencer is fully operational.</p>
+
+  <div class="check-row"><input type="checkbox" id="c-8a"><label for="c-8a"><strong>1. Sync status</strong> &mdash; proven tip matches network:</label></div>
+  <pre><code>curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}' \
+  http://localhost:8080 | jq -r ".result.proven.number"</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-8b"><label for="c-8b"><strong>2. HTTP status</strong> &mdash; endpoint responding:</label></div>
+  <pre><code>curl -s http://localhost:8080/status | jq .</code></pre>
+
+  <div class="check-row"><input type="checkbox" id="c-8c"><label for="c-8c"><strong>3. P2P connectivity</strong> &mdash; port reachable from outside:</label></div>
+  <pre><code class="tpl">nc -zv {{P2P_IP}} 40400</code></pre>
+  <div class="expected-label">Expected output</div>
+  <div class="expected">Connection to 203.0.113.42 40400 port [tcp/*] succeeded!</div>
+
+  <div class="check-row"><input type="checkbox" id="c-8d"><label for="c-8d"><strong>4. Container health</strong> &mdash; running and stable:</label></div>
+  <pre><code>docker compose ps</code></pre>
+  <div class="sim-terminal">
+    <div class="sim-terminal-bar"><span class="sim-terminal-dot red"></span><span class="sim-terminal-dot yellow"></span><span class="sim-terminal-dot green"></span><span class="sim-terminal-title">Expected: &quot;Up&quot; with no restart loop</span></div>
+    <div class="sim-terminal-body" id="sim-ps" data-lines='["$ docker compose ps","NAME              IMAGE                       STATUS","aztec-sequencer   aztecprotocol/aztec:latest   Up 10 minutes"]'>
+      <span class="prompt">$ </span><span class="cmd">docker compose ps</span>
+<span class="output">NAME              IMAGE                       STATUS
+aztec-sequencer   aztecprotocol/aztec:latest   Up 10 minutes</span>
+      <button class="sim-play-btn" onclick="playTerminal('sim-ps')">&#9654; Replay</button>
+    </div>
+  </div>
+
+  <div class="check-row"><input type="checkbox" id="c-8e"><label for="c-8e"><strong>5. Sequencer registered</strong> &mdash; status is VALIDATING:</label></div>
+  <pre><code class="tpl">cast call <span class="show-testnet">0x5932FCb01B6f63550C8bd91055613752480B6455</span><span class="show-mainnet">0x603bb2c05d474794ea97805e8de69bccfb3bca12</span> \
+  "getAttesterView(address)" {{ATTESTER_ADDR}} \
+  --rpc-url {{ETH_RPC}}</code></pre>
+
+  <!-- GATE -->
+  <div class="gate" id="gate-8">
+    <div class="gate-title">&#127881; All checks passed? You're live!</div>
+    <div class="check-row"><input type="checkbox" id="g-8a" class="gate-check" data-gate="gate-8"><label for="g-8a">All 5 health checks pass</label></div>
+    <div class="check-row"><input type="checkbox" id="g-8b" class="gate-check" data-gate="gate-8"><label for="g-8b">Sequencer status = VALIDATING</label></div>
+  </div>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#128161;</span>
+    <div>Your sequencer is now active. It will be randomly selected for <span class="term" data-def="A randomly selected subset of sequencers chosen each epoch to validate proposed blocks.">committees</span> starting next <span class="term" data-def="A period of 32 blocks. Rewards are distributed per epoch, and committee selection happens at epoch boundaries.">epoch</span>. You'll earn AZTEC rewards for attesting to blocks and proposing blocks. Keep reading for Day-2 operations.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  STEP 9: DAY-2 ESSENTIALS                                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="step-section" id="step-9">
+  <div class="step-title">
+    <span class="step-num" id="sn-9">9</span>
+    <h2>Day-2 Essentials</h2>
+    <span class="step-time">~5 min read</span>
+  </div>
+
+  <p>Your sequencer is running. Here's what to know for ongoing operations.</p>
+
+  <h3>Useful commands</h3>
+
+  <pre><code><span class="comment"># View logs</span>
+docker compose logs -f aztec-node
+
+<span class="comment"># Restart the node</span>
+docker compose restart aztec-node
+
+<span class="comment"># Stop the node</span>
+docker compose down
+
+<span class="comment"># Update to latest version</span>
+docker compose pull && docker compose up -d
+
+<span class="comment"># Check disk usage</span>
+du -sh ./data</code></pre>
+
+  <h3>Claim rewards</h3>
+
+  <div class="check-row"><input type="checkbox" id="c-9a"><label for="c-9a">Check if rewards are claimable:</label></div>
+  <pre><code class="tpl">cast call <span class="show-testnet">0x5932FCb01B6f63550C8bd91055613752480B6455</span><span class="show-mainnet">0x603bb2c05d474794ea97805e8de69bccfb3bca12</span> \
+  "getSequencerRewards(address)" {{COINBASE_ADDR}} \
+  --rpc-url {{ETH_RPC}}</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">&#8505;</span>
+    <div>Reward claiming is <strong>permissionless</strong> &mdash; anyone can call it for any address. Rewards always go to the coinbase address. Claim periodically to reduce accumulated balances in the Rollup contract.</div>
+  </div>
+
+  <h3>Monitoring (recommended)</h3>
+  <p>Aztec exports metrics via <strong>OpenTelemetry</strong>. The full monitoring stack is:</p>
+  <ul>
+    <li><strong>OpenTelemetry Collector</strong> &mdash; receives metrics from the node via OTLP</li>
+    <li><strong>Prometheus</strong> &mdash; stores time-series metrics</li>
+    <li><strong>Grafana</strong> &mdash; dashboards and alerts</li>
+  </ul>
+  <p>Key metrics to watch: attestation rate (target 99%+), block proposals, committee participation, peer count, disk usage.</p>
+
+  <div class="callout callout-tip">
+    <span class="callout-icon">&#128161;</span>
+    <div>Don't want to set up the full OTEL stack? <a href="https://github.com/pittpv/aztec-monitoring-script" target="_blank">pittpv/aztec-monitoring-script</a> is a lightweight community tool that monitors your node and sends alerts to Telegram.</div>
+  </div>
+
+  <p><a href="https://docs.aztec.network/operate/operators/monitoring" target="_blank">Full monitoring setup guide &rarr;</a></p>
+
+  <h3>Upgrades</h3>
+  <p>When a new version is released:</p>
+  <pre><code><span class="comment"># Pull new image and restart</span>
+docker compose pull && docker compose up -d
+
+<span class="comment"># Verify version</span>
+docker compose logs aztec-node | head -20</code></pre>
+
+  <div class="callout callout-warning">
+    <span class="callout-icon">&#9888;</span>
+    <div>Follow the <a href="https://discord.com/channels/1144692727120937080/1435605587017859072" target="_blank">#mn-sequencer-technical channel</a> and <a href="https://docs.aztec.network/operate/operators/reference/changelog" target="_blank">changelog</a> for upgrade announcements. Some upgrades require action within a specific timeframe.</div>
+  </div>
+
+  <h3>Slashing awareness</h3>
+  <p>Aztec uses a <span class="term" data-def="A cumulative scoring system for validator offenses. Points accumulate per offense type and trigger slashing at configurable thresholds.">Tally Model</span> with 6 offense types. Short outages from connectivity issues are <strong>not</strong> penalized harshly. Persistent double-signing or liveness failures accumulate penalty points. Check the <a href="https://docs.aztec.network/operate/operators/sequencer-management/slashing-configuration" target="_blank">slashing documentation</a> for details.</p>
+
+  <h3>Key links</h3>
+  <ul>
+    <li><a href="https://docs.aztec.network/operate/operators" target="_blank">Full operator documentation</a></li>
+    <li><a href="https://docs.aztec.network/networks" target="_blank">Network info &amp; contract addresses</a></li>
+    <li><a href="https://stake.aztec.network" target="_blank">Staking dashboard</a></li>
+    <li><a href="https://dashtec.xyz" target="_blank">Dashtec &mdash; sequencer analytics</a></li>
+    <li><a href="https://aztecscan.xyz" target="_blank">AztecScan &mdash; block explorer</a></li>
+    <li><a href="https://discord.com/channels/1144692727120937080/1435605587017859072" target="_blank">Discord #mn-sequencer-technical</a></li>
+    <li><a href="https://docs.aztec.network/operate/operators/reference/cli-reference" target="_blank">CLI reference (1000+ flags)</a></li>
+    <li><a href="https://docs.aztec.network/operate/operators/reference/node_api_reference" target="_blank">Node API reference (JSON-RPC)</a></li>
+    <li><a href="https://github.com/pittpv/aztec-monitoring-script" target="_blank">Community monitoring script</a></li>
+  </ul>
+</div>
+
+<hr class="section-divider">
+
+<div style="display:flex; gap:.75rem; justify-content:center; margin:2rem 0 1rem;">
+  <button onclick="exportSession()" style="font-family:var(--sans); font-size:.85rem; padding:.5rem 1.25rem; border-radius:6px; cursor:pointer; border:1px solid var(--az-link); background:var(--az-link); color:#fff; font-weight:600;">Export as Bash Script</button>
+  <button onclick="clearAllData()" style="font-family:var(--sans); font-size:.85rem; padding:.5rem 1.25rem; border-radius:6px; cursor:pointer; border:1px solid var(--danger-border); background:var(--az-card-bg); color:var(--danger-border); font-weight:600;">Clear All Data</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Config persistence (split: sensitive vs safe) ──
+const STORAGE_KEY = 'aztec-onepager-config';
+const SECRET_KEY = 'aztec-onepager-secrets';
+const CHECK_KEY = 'aztec-onepager-checks';
+const NET_KEY = 'aztec-onepager-network';
+
+// Non-sensitive: persisted in localStorage (survives tab close)
+const safeFields = [
+  'cfg-P2P_IP','cfg-ATTESTER_ADDR','cfg-PUBLISHER_ADDR','cfg-COINBASE_ADDR'
+];
+// Sensitive: sessionStorage only (erased on tab close)
+const secretFields = ['cfg-PUBLISHER_KEY','cfg-ETH_RPC','cfg-CONSENSUS_RPC','cfg-DEBUG_RPC'];
+const configFields = safeFields.concat(secretFields);
+
+const fieldMap = {
+  'cfg-ETH_RPC':'ETH_RPC','cfg-CONSENSUS_RPC':'CONSENSUS_RPC',
+  'cfg-DEBUG_RPC':'DEBUG_RPC','cfg-P2P_IP':'P2P_IP',
+  'cfg-PUBLISHER_KEY':'PUBLISHER_KEY','cfg-ATTESTER_ADDR':'ATTESTER_ADDR',
+  'cfg-PUBLISHER_ADDR':'PUBLISHER_ADDR','cfg-COINBASE_ADDR':'COINBASE_ADDR'
+};
+
+function loadConfig() {
+  try {
+    // Safe fields from localStorage
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    safeFields.forEach(id => { const el = document.getElementById(id); if (el && saved[id]) el.value = saved[id]; });
+    // Secrets from sessionStorage
+    const secrets = JSON.parse(sessionStorage.getItem(SECRET_KEY) || '{}');
+    secretFields.forEach(id => { const el = document.getElementById(id); if (el && secrets[id]) el.value = secrets[id]; });
+  } catch(e) {}
+}
+
+function saveConfig() {
+  // Save non-sensitive to localStorage
+  const safeData = {};
+  safeFields.forEach(id => { const el = document.getElementById(id); if (el) safeData[id] = el.value; });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(safeData));
+  // Save secrets to sessionStorage only
+  const secretData = {};
+  secretFields.forEach(id => { const el = document.getElementById(id); if (el) secretData[id] = el.value; });
+  sessionStorage.setItem(SECRET_KEY, JSON.stringify(secretData));
+  renderTemplates();
+}
+
+configFields.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', saveConfig);
+});
+
+// ── Auto-clear secrets on tab close ──
+window.addEventListener('beforeunload', function() {
+  sessionStorage.removeItem(SECRET_KEY);
+});
+
+// ── Template rendering (masks secrets in visible output, stores full values for copy) ──
+function maskSecret(val) {
+  if (!val || val.length < 10) return val;
+  return val.slice(0, 6) + '****' + val.slice(-4);
+}
+
+// Store full (unmasked) values for copy buttons
+let fullTemplateValues = {};
+
+function renderTemplates() {
+  const displayVals = {};
+  fullTemplateValues = {};
+  configFields.forEach(id => {
+    const el = document.getElementById(id);
+    const raw = el && el.value ? el.value : '';
+    const key = fieldMap[id];
+    // Full values for clipboard copy
+    fullTemplateValues[key] = raw || '{{' + key + '}}';
+    // Masked values for display
+    if (secretFields.includes(id) && raw) {
+      displayVals[key] = maskSecret(raw);
+    } else {
+      displayVals[key] = raw || '{{' + key + '}}';
+    }
+  });
+
+  document.querySelectorAll('.tpl').forEach(el => {
+    if (!el.dataset.orig) el.dataset.orig = el.innerHTML;
+    let html = el.dataset.orig;
+    // Build full-value version for copy (stored as data attribute)
+    let fullText = el.dataset.orig;
+    Object.keys(displayVals).forEach(k => {
+      html = html.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), displayVals[k]);
+      fullText = fullText.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), fullTemplateValues[k]);
+    });
+    el.innerHTML = html;
+    // Store full text (with unmasked secrets) for copy button
+    el.dataset.fullText = fullText.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  });
+}
+
+// ── Inline config field sync (bidirectional) ──
+function setupInlineSync() {
+  document.querySelectorAll('.inline-config input[data-sync]').forEach(ic => {
+    const targetId = ic.getAttribute('data-sync');
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    // Load initial value from config panel
+    if (target.value && !ic.value) ic.value = target.value;
+    // Inline → config panel
+    ic.addEventListener('input', function() {
+      target.value = ic.value;
+      saveConfig();
+    });
+    // Config panel → inline
+    target.addEventListener('input', function() {
+      ic.value = target.value;
+    });
+  });
+}
+
+// ── Config panel toggle ──
+let configOpen = true;
+function toggleConfig() {
+  configOpen = !configOpen;
+  document.getElementById('config-body').style.display = configOpen ? 'grid' : 'none';
+  document.querySelector('.config-desc').style.display = configOpen ? 'block' : 'none';
+  document.getElementById('config-toggle').innerHTML = configOpen ? '&#9660; COLLAPSE' : '&#9654; EXPAND';
+}
+
+// ── Password field toggle ──
+function togglePwField(fieldId, btn) {
+  const el = document.getElementById(fieldId);
+  if (el.type === 'password') { el.type = 'text'; btn.textContent = 'Hide'; }
+  else { el.type = 'password'; btn.textContent = 'Show'; }
+}
+
+// ── Network toggle ──
+function toggleNetwork(isMainnet) {
+  document.body.classList.toggle('mainnet', isMainnet);
+  localStorage.setItem(NET_KEY, isMainnet ? 'mainnet' : 'testnet');
+  // Swap placeholders for network-aware fields
+  const suffix = isMainnet ? 'mainnet' : 'testnet';
+  document.querySelectorAll('[data-ph-' + suffix + ']').forEach(el => {
+    el.placeholder = el.getAttribute('data-ph-' + suffix);
+  });
+  renderTemplates();
+}
+
+function loadNetwork() {
+  const net = localStorage.getItem(NET_KEY);
+  const isMainnet = net === 'mainnet';
+  if (isMainnet) {
+    document.getElementById('net-toggle').checked = true;
+    document.body.classList.add('mainnet');
+  }
+  // Set placeholders for current network
+  const suffix = isMainnet ? 'mainnet' : 'testnet';
+  document.querySelectorAll('[data-ph-' + suffix + ']').forEach(el => {
+    el.placeholder = el.getAttribute('data-ph-' + suffix);
+  });
+}
+
+// ── Export as .env (uses real values, not masked) ──
+function exportEnv() {
+  const vals = {};
+  configFields.forEach(id => { const el = document.getElementById(id); if (el && el.value) vals[fieldMap[id]] = el.value; });
+  if (!confirm('The exported .env file will contain your Publisher Private Key in plaintext. Save it securely and never commit it to git.')) return;
+  let env = '# Aztec Sequencer .env (exported from one-pager)\n';
+  env += 'DATA_DIRECTORY=./data\nKEY_STORE_DIRECTORY=./keys\nLOG_LEVEL=info\n';
+  if (vals.ETH_RPC) env += 'ETHEREUM_HOSTS=' + vals.ETH_RPC + '\n';
+  if (vals.CONSENSUS_RPC) env += 'L1_CONSENSUS_HOST_URLS=' + vals.CONSENSUS_RPC + '\n';
+  if (vals.DEBUG_RPC) env += 'ETHEREUM_DEBUG_HOSTS=' + vals.DEBUG_RPC + '\n';
+  if (vals.P2P_IP) env += 'P2P_IP=' + vals.P2P_IP + '\n';
+  env += 'P2P_PORT=40400\nAZTEC_PORT=8080\nAZTEC_ADMIN_PORT=8880\n';
+  const blob = new Blob([env], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = '.env'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Clear all data ──
+function clearAllData() {
+  if (!confirm('Clear all saved configuration and checkbox progress?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CHECK_KEY);
+  localStorage.removeItem(NET_KEY);
+  sessionStorage.removeItem(SECRET_KEY);
+  configFields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  document.getElementById('net-toggle').checked = false;
+  document.body.classList.remove('mainnet');
+  renderTemplates();
+  updateProgress();
+}
+
+// ── Checkbox persistence + progress ──
+function loadChecks() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHECK_KEY) || '{}');
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (saved[cb.id]) cb.checked = true;
+    });
+  } catch(e) {}
+}
+
+function saveChecks() {
+  const data = {};
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    if (cb.checked) data[cb.id] = true;
+  });
+  localStorage.setItem(CHECK_KEY, JSON.stringify(data));
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('input[type="checkbox"]');
+  const checked = document.querySelectorAll('input[type="checkbox"]:checked');
+  const total = all.length;
+  const done = checked.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('progress-count').textContent = done;
+  document.getElementById('progress-total').textContent = total;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+
+  // Update step number badges
+  for (let i = 0; i <= 9; i++) {
+    const section = document.getElementById('step-' + i);
+    const badge = document.getElementById('sn-' + i);
+    if (!section || !badge) continue;
+    const cbs = section.querySelectorAll('input[type="checkbox"]');
+    const allChecked = cbs.length > 0 && Array.from(cbs).every(c => c.checked);
+    badge.classList.toggle('done', allChecked);
+  }
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.type === 'checkbox') {
+    saveChecks();
+    updateProgress();
+  }
+});
+
+// ── Copy buttons (uses full unmasked values from data-fullText) ──
+function addCopyButtons() {
+  document.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector('.copy-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = function() {
+      const code = pre.querySelector('code');
+      // Use full (unmasked) text if available, otherwise fall back to visible text
+      let text;
+      if (code && code.dataset.fullText) {
+        text = code.dataset.fullText.trim();
+      } else {
+        text = (code || pre).textContent.replace(/^Copy$/, '').trim();
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    };
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+}
+
+// ── Simulated terminal playback ──
+function playTerminal(id) {
+  const el = document.getElementById(id);
+  if (!el || el.dataset.playing === 'true') return;
+  const lines = JSON.parse(el.dataset.lines || '[]');
+  if (!lines.length) return;
+  el.dataset.playing = 'true';
+  el.innerHTML = '';
+  let lineIdx = 0;
+  let charIdx = 0;
+
+  function typeNext() {
+    if (lineIdx >= lines.length) {
+      // Done — remove cursor, add replay button
+      const cursor = el.querySelector('.cursor');
+      if (cursor) cursor.remove();
+      const btn = document.createElement('button');
+      btn.className = 'sim-play-btn';
+      btn.innerHTML = '&#9654; Replay';
+      btn.onclick = function() { playTerminal(id); };
+      el.appendChild(btn);
+      el.dataset.playing = 'false';
+      return;
+    }
+    const line = lines[lineIdx];
+    const isCmd = line.startsWith('$ ');
+    const isComment = line.startsWith('$ #') || line.startsWith('#');
+
+    if (charIdx === 0 && isCmd) {
+      // Add prompt
+      const prompt = document.createElement('span');
+      prompt.className = 'prompt';
+      prompt.textContent = '$ ';
+      el.appendChild(prompt);
+      charIdx = 2; // skip "$ "
+    }
+
+    if (isCmd && !isComment && charIdx < line.length) {
+      // Type command char by char
+      const ch = line[charIdx];
+      const cursor = el.querySelector('.cursor');
+      if (cursor) cursor.remove();
+      const span = el.lastElementChild && el.lastElementChild.className === 'cmd' ? el.lastElementChild : document.createElement('span');
+      if (span.className !== 'cmd') { span.className = 'cmd'; el.appendChild(span); }
+      span.textContent += ch;
+      const cur = document.createElement('span');
+      cur.className = 'cursor';
+      el.appendChild(cur);
+      charIdx++;
+      setTimeout(typeNext, 20 + Math.random() * 30);
+    } else {
+      // Print output line instantly
+      const cursor = el.querySelector('.cursor');
+      if (cursor) cursor.remove();
+      if (!isCmd) {
+        const out = document.createElement('span');
+        out.className = isComment ? 'comment' : 'output';
+        out.textContent = line;
+        el.appendChild(out);
+      }
+      el.appendChild(document.createTextNode('\n'));
+      lineIdx++;
+      charIdx = 0;
+      setTimeout(typeNext, isCmd ? 400 : 80);
+    }
+  }
+  typeNext();
+}
+
+// ── Export full session as bash script ──
+function exportSession() {
+  const isMainnet = document.body.classList.contains('mainnet');
+  const net = isMainnet ? 'mainnet' : 'testnet';
+  const vals = {};
+  configFields.forEach(id => { const el = document.getElementById(id); if (el && el.value) vals[fieldMap[id]] = el.value; });
+
+  const v = (k, fallback) => vals[k] || fallback || '{{' + k + '}}';
+
+  const gse = isMainnet ? '0xa92ecFD0E70c9cd5E5cd76c50Af0F7Da93567a4f' : '0xb6a38a51a6c1de9012f9d8ea9745ef957212eaac';
+  const registry = isMainnet ? '0x35b22e09ee0390539439e24f06da43d83f90e298' : '0xa0bfb1b494fb49041e5c6e8c2c1be09cd171c6ba';
+  const rollup = isMainnet ? '0x603bb2c05d474794ea97805e8de69bccfb3bca12' : '0x5932FCb01B6f63550C8bd91055613752480B6455';
+  const imgTag = isMainnet ? '2.1.11' : 'latest';
+  const networkName = 'ignition';
+
+  let s = '';
+  const L = (line) => { s += line + '\n'; };
+
+  L('#!/usr/bin/env bash');
+  L('#');
+  L('# Aztec Sequencer Setup Script');
+  L('# Generated from the One-Pager Runbook');
+  L('# Network: ' + net);
+  L('# Date: ' + new Date().toISOString().split('T')[0]);
+  L('#');
+  L('# WARNING: This script contains sensitive data (RPC URLs, private key).');
+  L('# Store it securely. Never commit to git. chmod 600 this file.');
+  L('#');
+  L('set -euo pipefail');
+  L('');
+  L('# ── Colors ──');
+  L('RED="\\033[0;31m"; GREEN="\\033[0;32m"; YELLOW="\\033[1;33m"; CYAN="\\033[0;36m"; BOLD="\\033[1m"; NC="\\033[0m"');
+  L('step()  { echo -e "\\n${CYAN}${BOLD}=== $1 ===${NC}"; }');
+  L('ok()    { echo -e "${GREEN}✓ $1${NC}"; }');
+  L('warn()  { echo -e "${YELLOW}⚠ $1${NC}"; }');
+  L('fail()  { echo -e "${RED}✗ $1${NC}"; }');
+  L('pause() { echo -e "\\n${YELLOW}Press Enter to continue (Ctrl+C to abort)...${NC}"; read -r; }');
+  L('');
+
+  // Step 0: Pre-flight
+  L('step "Step 0: Pre-flight Checks"');
+  L('');
+  L('# Check Docker');
+  L('if command -v docker &>/dev/null && docker compose version &>/dev/null; then');
+  L('  ok "Docker $(docker --version | grep -oP \'\\d+\\.\\d+\\.\\d+\') + Compose installed"');
+  L('else');
+  L('  fail "Docker or Docker Compose not found. Install: https://docs.docker.com/engine/install/"');
+  L('  exit 1');
+  L('fi');
+  L('');
+  L('# Check jq');
+  L('if command -v jq &>/dev/null; then');
+  L('  ok "jq $(jq --version 2>&1) installed"');
+  L('else');
+  L('  warn "jq not found — installing..."');
+  L('  sudo apt-get install -y jq 2>/dev/null || brew install jq 2>/dev/null || { fail "Could not install jq"; exit 1; }');
+  L('fi');
+  L('');
+  L('# Check curl');
+  L('command -v curl &>/dev/null && ok "curl installed" || { fail "curl not found"; exit 1; }');
+  L('');
+  L('# Check port 40400');
+  L('if ss -tlnp 2>/dev/null | grep -q ":40400 " || lsof -i :40400 &>/dev/null; then');
+  L('  warn "Port 40400 is already in use — check for conflicts"');
+  L('else');
+  L('  ok "Port 40400 is available"');
+  L('fi');
+  L('');
+  L('# Check disk space');
+  L('AVAIL_GB=$(df -BG . | tail -1 | awk \'{print $4}\' | tr -d \'G\')');
+  L('if [ "${AVAIL_GB:-0}" -ge 500 ]; then');
+  L('  ok "Disk space: ${AVAIL_GB}GB available"');
+  L('else');
+  L('  warn "Disk space: ${AVAIL_GB}GB — recommended 500GB+ for production"');
+  L('fi');
+  L('');
+  L('# Check RAM');
+  L('RAM_GB=$(free -g 2>/dev/null | awk \'/^Mem:/{print $2}\' || sysctl -n hw.memsize 2>/dev/null | awk \'{printf "%d", $1/1073741824}\')');
+  L('if [ "${RAM_GB:-0}" -ge 16 ]; then');
+  L('  ok "RAM: ${RAM_GB}GB"');
+  L('else');
+  L('  warn "RAM: ${RAM_GB}GB — minimum 16GB recommended"');
+  L('fi');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 1: Install toolchain
+  L('step "Step 1: Install Aztec Toolchain"');
+  L('');
+  L('if command -v aztec &>/dev/null; then');
+  L('  ok "Aztec CLI already installed: $(aztec --version 2>&1 || echo unknown)"');
+  L('else');
+  L('  echo "Installing Aztec CLI..."');
+  L('  bash -i <(curl -sL https://install.aztec.network)');
+  L('  source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true');
+  L('  ok "Aztec CLI installed: $(aztec --version 2>&1)"');
+  L('fi');
+  L('');
+  L('if command -v cast &>/dev/null; then');
+  L('  ok "Foundry already installed: $(cast --version 2>&1 | head -1)"');
+  L('else');
+  L('  echo "Installing Foundry..."');
+  L('  curl -L https://foundry.paradigm.xyz | bash');
+  L('  source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true');
+  L('  foundryup');
+  L('  ok "Foundry installed"');
+  L('fi');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 2: Generate keystore
+  L('step "Step 2: Generate Keystore"');
+  L('');
+  L('if [ -f ~/.aztec/keystore/key1.json ]; then');
+  L('  ok "Keystore already exists at ~/.aztec/keystore/key1.json"');
+  L('  echo "  Attester: $(jq -r \'.attester // empty\' ~/.aztec/keystore/key1_staker_output.json 2>/dev/null || echo \'N/A\')"');
+  L('  echo ""');
+  L('  echo -e "${YELLOW}To regenerate, delete ~/.aztec/keystore/ and re-run this script.${NC}"');
+  L('else');
+  L('  echo -e "${BOLD}Generate a publisher mnemonic (24 words):${NC}"');
+  L('  echo "  Run: cast wallet new-mnemonic --words 24"');
+  L('  echo ""');
+  L('  echo -e "${RED}${BOLD}IMPORTANT: Write down the mnemonic on paper NOW. This is your only backup.${NC}"');
+  L('  echo ""');
+  L('  cast wallet new-mnemonic --words 24');
+  L('  echo ""');
+  L('  echo -e "${BOLD}Now derive the private key from your mnemonic:${NC}"');
+  L('  echo "  Run: cast wallet derive-key \\"your 24 word mnemonic here\\""');
+  L('  echo ""');
+  L('  read -rp "Paste your publisher private key (0x...): " USER_PUB_KEY');
+  L('  echo ""');
+  L('  echo "Generating validator keystore..."');
+  L('  aztec validator-keys new \\');
+  L('    --fee-recipient 0x0000000000000000000000000000000000000000000000000000000000000000 \\');
+  L('    --staker-output \\');
+  L('    --gse-address ' + gse + ' \\');
+  L('    --l1-rpc-urls ' + v('ETH_RPC') + ' \\');
+  L('    --publishers "${USER_PUB_KEY}"');
+  L('  echo ""');
+  L('  ok "Keystore created at ~/.aztec/keystore/"');
+  L('  echo "  key1.json (private — never share)"');
+  L('  echo "  key1_staker_output.json (public — needed for registration)"');
+  L('  echo ""');
+  L('  echo "Attester address:"');
+  L('  jq -r \'.attester\' ~/.aztec/keystore/key1_staker_output.json');
+  L('fi');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 3: Fund accounts
+  L('step "Step 3: Fund Your Accounts"');
+  L('');
+  L('PUBLISHER_ADDR="' + v('PUBLISHER_ADDR', '$(jq -r \'.validators[0].publisher[0]\' ~/.aztec/keystore/key1.json 2>/dev/null | xargs cast wallet address --private-key 2>/dev/null || echo "UNKNOWN")') + '"');
+  L('echo "Publisher address: ${PUBLISHER_ADDR}"');
+  L('');
+  L('echo "Checking publisher ETH balance..."');
+  L('PUB_BAL=$(cast balance "${PUBLISHER_ADDR}" --rpc-url ' + v('ETH_RPC') + ' --ether 2>/dev/null || echo "0")');
+  L('echo "  Balance: ${PUB_BAL} ETH"');
+  L('');
+  L('# Check if balance is sufficient (needs at least 0.1 ETH)');
+  L('if command -v bc &>/dev/null && [ "$(echo "${PUB_BAL} >= 0.1" | bc 2>/dev/null)" = "1" ]; then');
+  L('  ok "Publisher has sufficient ETH (${PUB_BAL} ETH)"');
+  L('else');
+  L('  warn "Publisher may need more ETH. Minimum 0.1 ETH per attester."');
+  L('  echo "  Send ETH to: ${PUBLISHER_ADDR}"');
+  L('fi');
+  L('');
+  L('echo ""');
+  L('echo -e "${BOLD}Reminder:${NC} You also need 200,000 AZTEC tokens for staking (self-stake or delegated)."');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 4: Configure environment
+  L('step "Step 4: Configure Environment"');
+  L('');
+  L('WORK_DIR="${HOME}/aztec-node"');
+  L('mkdir -p "${WORK_DIR}/data"');
+  L('cp -r ~/.aztec/keystore "${WORK_DIR}/keys" 2>/dev/null && ok "Keystore copied to ${WORK_DIR}/keys" || warn "Keystore copy skipped (may already exist)"');
+  L('cd "${WORK_DIR}"');
+  L('');
+  L('cat > .env << \'ENVEOF\'');
+  L('# Aztec Sequencer Configuration');
+  L('DATA_DIRECTORY=./data');
+  L('KEY_STORE_DIRECTORY=./keys');
+  L('LOG_LEVEL=info');
+  L('ETHEREUM_HOSTS=' + v('ETH_RPC'));
+  L('L1_CONSENSUS_HOST_URLS=' + v('CONSENSUS_RPC'));
+  L('ETHEREUM_DEBUG_HOSTS=' + v('DEBUG_RPC'));
+  L('P2P_IP=' + v('P2P_IP'));
+  L('P2P_PORT=40400');
+  L('AZTEC_PORT=8080');
+  L('AZTEC_ADMIN_PORT=8880');
+  L('ENVEOF');
+  L('');
+  L('chmod 600 .env');
+  L('ok ".env created at ${WORK_DIR}/.env (permissions: 600)"');
+  L('');
+
+  // Step 5: Docker Compose
+  L('step "Step 5: Create Docker Compose"');
+  L('');
+  L('cat > docker-compose.yml << \'DCEOF\'');
+  L('services:');
+  L('  aztec-node:');
+  L('    image: "aztecprotocol/aztec:' + imgTag + '"');
+  L('    container_name: "aztec-sequencer"');
+  L('    ports:');
+  L('      - "${AZTEC_PORT}:${AZTEC_PORT}"');
+  L('      - "${P2P_PORT}:${P2P_PORT}"');
+  L('      - "${P2P_PORT}:${P2P_PORT}/udp"');
+  L('    volumes:');
+  L('      - ${DATA_DIRECTORY}:/var/lib/data');
+  L('      - ${KEY_STORE_DIRECTORY}:/var/lib/keys:ro');
+  L('    environment:');
+  L('      DATA_DIRECTORY: /var/lib/data');
+  L('      KEY_STORE_DIRECTORY: /var/lib/keys');
+  L('      LOG_LEVEL: ${LOG_LEVEL}');
+  L('      ETHEREUM_HOSTS: ${ETHEREUM_HOSTS}');
+  L('      L1_CONSENSUS_HOST_URLS: ${L1_CONSENSUS_HOST_URLS}');
+  L('      ETHEREUM_DEBUG_HOSTS: ${ETHEREUM_DEBUG_HOSTS}');
+  L('      P2P_IP: ${P2P_IP}');
+  L('      P2P_PORT: ${P2P_PORT}');
+  L('      AZTEC_PORT: ${AZTEC_PORT}');
+  L('      AZTEC_ADMIN_PORT: ${AZTEC_ADMIN_PORT}');
+  L('    entrypoint: >-');
+  L('      node');
+  L('      --no-warnings');
+  L('      /usr/src/yarn-project/aztec/dest/bin/index.js');
+  L('      start');
+  L('      --node');
+  L('      --archiver');
+  L('      --sequencer');
+  L('      --network ' + networkName);
+  L('    networks:');
+  L('      - aztec');
+  L('    restart: always');
+  L('');
+  L('networks:');
+  L('  aztec:');
+  L('    name: aztec');
+  L('DCEOF');
+  L('');
+  L('ok "docker-compose.yml created"');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 6: Start node
+  L('step "Step 6: Start the Node"');
+  L('');
+  L('docker compose up -d');
+  L('ok "Container started"');
+  L('');
+  L('echo "Waiting for node to start syncing..."');
+  L('sleep 5');
+  L('');
+  L('# Sync progress loop');
+  L('echo "Checking sync progress (Ctrl+C to skip waiting)..."');
+  L('PREV_BLOCK=0');
+  L('STALL_COUNT=0');
+  L('for i in $(seq 1 60); do');
+  L('  BLOCK=$(curl -s -X POST -H \'Content-Type: application/json\' \\');
+  L('    -d \'{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}\' \\');
+  L('    http://localhost:8080 2>/dev/null | jq -r ".result.proven.number // 0" 2>/dev/null || echo "0")');
+  L('  if [ "$BLOCK" != "0" ] && [ "$BLOCK" != "null" ]; then');
+  L('    echo -e "  Proven block: ${GREEN}${BLOCK}${NC}"');
+  L('    if [ "$BLOCK" = "$PREV_BLOCK" ]; then');
+  L('      STALL_COUNT=$((STALL_COUNT + 1))');
+  L('      if [ "$STALL_COUNT" -ge 3 ]; then');
+  L('        ok "Block height stable at ${BLOCK} — likely synced"');
+  L('        break');
+  L('      fi');
+  L('    else');
+  L('      STALL_COUNT=0');
+  L('    fi');
+  L('    PREV_BLOCK="$BLOCK"');
+  L('  else');
+  L('    echo "  Waiting for node to respond..."');
+  L('  fi');
+  L('  sleep 10');
+  L('done');
+  L('');
+  L('echo ""');
+  L('echo "To watch live logs: docker compose logs -f aztec-node"');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 7: Register
+  L('step "Step 7: Register as Sequencer"');
+  L('');
+  L('echo -e "${BOLD}Register via the Staking Dashboard:${NC}"');
+  L('echo "  1. Open https://stake.aztec.network"');
+  L('echo "  2. Connect wallet with AZTEC tokens"');
+  L('echo "  3. Select \\"Run your own Sequencer\\""');
+  L('echo "  4. Upload: ~/.aztec/keystore/key1_staker_output.json"');
+  L('echo "  5. Approve token spending and stake"');
+  L('echo ""');
+  L('echo -e "${YELLOW}After staking, your sequencer enters a queue. It takes 1-2 epochs to become active.${NC}"');
+  L('');
+  L('read -rp "Have you completed registration? (y/n): " REG_DONE');
+  L('if [ "$REG_DONE" = "y" ] || [ "$REG_DONE" = "Y" ]; then');
+  L('  echo ""');
+  L('  echo "Checking registration status..."');
+  L('  ATTESTER="' + v('ATTESTER_ADDR', '$(jq -r \'.attester\' ~/.aztec/keystore/key1_staker_output.json 2>/dev/null || echo "UNKNOWN")') + '"');
+  L('  echo "  Attester: ${ATTESTER}"');
+  L('  STATUS=$(cast call ' + rollup + ' "getAttesterView(address)" "${ATTESTER}" --rpc-url ' + v('ETH_RPC') + ' 2>/dev/null || echo "error")');
+  L('  echo "  Raw status: ${STATUS}"');
+  L('  echo ""');
+  L('  echo "  Status codes: NONE=0, VALIDATING=1, ZOMBIE=2, EXITING=3"');
+  L('  ok "Registration check complete"');
+  L('else');
+  L('  warn "Skipping registration check. Run later:"');
+  L('  echo "  cast call ' + rollup + ' \\"getAttesterView(address)\\" YOUR_ATTESTER_ADDR --rpc-url YOUR_RPC"');
+  L('fi');
+  L('');
+  L('pause');
+  L('');
+
+  // Step 8: Health check
+  L('step "Step 8: Verify Everything Works"');
+  L('');
+  L('CHECKS_PASSED=0');
+  L('CHECKS_TOTAL=5');
+  L('');
+  L('# 1. Sync status');
+  L('echo -n "1. Sync status... "');
+  L('BLOCK=$(curl -s -X POST -H \'Content-Type: application/json\' \\');
+  L('  -d \'{"jsonrpc":"2.0","method":"node_getL2Tips","params":[],"id":67}\' \\');
+  L('  http://localhost:8080 2>/dev/null | jq -r ".result.proven.number // 0" 2>/dev/null || echo "0")');
+  L('if [ "$BLOCK" != "0" ] && [ "$BLOCK" != "null" ]; then');
+  L('  ok "proven block ${BLOCK}"');
+  L('  CHECKS_PASSED=$((CHECKS_PASSED + 1))');
+  L('else');
+  L('  fail "node not responding or not synced"');
+  L('fi');
+  L('');
+  L('# 2. HTTP status');
+  L('echo -n "2. HTTP status... "');
+  L('HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/status 2>/dev/null || echo "000")');
+  L('if [ "$HTTP_CODE" = "200" ]; then');
+  L('  ok "HTTP 200"');
+  L('  CHECKS_PASSED=$((CHECKS_PASSED + 1))');
+  L('else');
+  L('  fail "HTTP ${HTTP_CODE}"');
+  L('fi');
+  L('');
+  L('# 3. P2P port');
+  L('echo -n "3. P2P port 40400... "');
+  L('if ss -tlnp 2>/dev/null | grep -q ":40400 "; then');
+  L('  ok "listening"');
+  L('  CHECKS_PASSED=$((CHECKS_PASSED + 1))');
+  L('else');
+  L('  warn "not detected locally (may still be reachable externally)"');
+  L('fi');
+  L('');
+  L('# 4. Container health');
+  L('echo -n "4. Container health... "');
+  L('CONTAINER_STATUS=$(docker compose ps --format "{{.Status}}" 2>/dev/null | head -1)');
+  L('if echo "$CONTAINER_STATUS" | grep -qi "up"; then');
+  L('  ok "${CONTAINER_STATUS}"');
+  L('  CHECKS_PASSED=$((CHECKS_PASSED + 1))');
+  L('else');
+  L('  fail "${CONTAINER_STATUS:-not running}"');
+  L('fi');
+  L('');
+  L('# 5. No crash loop');
+  L('echo -n "5. Restart count... "');
+  L('RESTARTS=$(docker inspect aztec-sequencer --format="{{.RestartCount}}" 2>/dev/null || echo "?")');
+  L('if [ "$RESTARTS" = "0" ] || [ "$RESTARTS" = "?" ]; then');
+  L('  ok "no restarts"');
+  L('  CHECKS_PASSED=$((CHECKS_PASSED + 1))');
+  L('else');
+  L('  warn "${RESTARTS} restarts detected"');
+  L('fi');
+  L('');
+  L('echo ""');
+  L('echo -e "${BOLD}Health check: ${CHECKS_PASSED}/${CHECKS_TOTAL} passed${NC}"');
+  L('if [ "$CHECKS_PASSED" -eq "$CHECKS_TOTAL" ]; then');
+  L('  echo -e "${GREEN}${BOLD}All checks passed! Your sequencer is live.${NC}"');
+  L('else');
+  L('  echo -e "${YELLOW}Some checks need attention. Check logs: docker compose logs aztec-node${NC}"');
+  L('fi');
+  L('');
+  L('');
+
+  // Step 9: Day-2 reference
+  L('step "Step 9: Day-2 Quick Reference"');
+  L('');
+  L('echo -e "${BOLD}Useful commands:${NC}"');
+  L('echo "  docker compose logs -f aztec-node    # View logs"');
+  L('echo "  docker compose restart aztec-node     # Restart"');
+  L('echo "  docker compose down                   # Stop"');
+  L('echo "  docker compose pull && docker compose up -d  # Update"');
+  L('echo "  du -sh ./data                         # Disk usage"');
+  L('echo ""');
+  L('echo -e "${BOLD}Check rewards:${NC}"');
+  if (vals.COINBASE_ADDR) {
+    L('echo "  cast call ' + rollup + ' \\"getSequencerRewards(address)\\" ' + vals.COINBASE_ADDR + ' --rpc-url ' + v('ETH_RPC') + '"');
+  } else {
+    L('echo "  cast call ' + rollup + ' \\"getSequencerRewards(address)\\" YOUR_COINBASE_ADDR --rpc-url ' + v('ETH_RPC') + '"');
+  }
+  L('echo ""');
+  L('echo -e "${BOLD}Key links:${NC}"');
+  L('echo "  Docs:       https://docs.aztec.network/operate/operators"');
+  L('echo "  Dashboard:  https://stake.aztec.network"');
+  L('echo "  Explorer:   https://aztecscan.xyz"');
+  L('echo "  Analytics:  https://dashtec.xyz"');
+  L('echo "  Discord:    https://discord.com/channels/1144692727120937080/1435605587017859072"');
+  L('echo "  Monitoring: https://github.com/pittpv/aztec-monitoring-script"');
+  L('echo ""');
+  L('echo -e "${GREEN}${BOLD}Setup complete! Your sequencer is running.${NC}"');
+
+  const script = s;
+
+  if (!confirm('The exported script contains sensitive data (RPC URLs, private key).\n\nStore it securely, chmod 600, and never commit to git.\n\nContinue?')) return;
+
+  const blob = new Blob([script], { type: 'text/x-shellscript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'aztec-sequencer-setup.sh'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Prose-to-Code highlighting ──
+function setupHighlightLinks() {
+  const hlElements = document.querySelectorAll('[data-hl]');
+  // Group by hl key
+  const groups = {};
+  hlElements.forEach(el => {
+    const key = el.getAttribute('data-hl');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(el);
+  });
+  // Add hover listeners
+  hlElements.forEach(el => {
+    const key = el.getAttribute('data-hl');
+    el.addEventListener('mouseenter', () => {
+      (groups[key] || []).forEach(peer => peer.classList.add('hl-active'));
+    });
+    el.addEventListener('mouseleave', () => {
+      (groups[key] || []).forEach(peer => peer.classList.remove('hl-active'));
+    });
+  });
+}
+
+// ── Command palette (Ctrl+K) ──
+const paletteItems = [
+  { num: '0', label: 'Pre-flight Checklist', time: '2 min', href: '#step-0', keywords: 'hardware software docker prerequisites requirements' },
+  { num: '1', label: 'Install Aztec Toolchain', time: '2 min', href: '#step-1', keywords: 'install aztec cli foundry cast' },
+  { num: '2', label: 'Generate Keystore', time: '5 min', href: '#step-2', keywords: 'keys mnemonic attester publisher bls keystore generate' },
+  { num: '3', label: 'Fund Your Accounts', time: '5 min', href: '#step-3', keywords: 'fund eth aztec tokens stake balance' },
+  { num: '4', label: 'Configure Environment', time: '5 min', href: '#step-4', keywords: 'env config rpc p2p ip environment variables' },
+  { num: '5', label: 'Create Docker Compose', time: '3 min', href: '#step-5', keywords: 'docker compose yaml container volumes' },
+  { num: '6', label: 'Start the Node', time: '5-15 min', href: '#step-6', keywords: 'start launch sync logs running' },
+  { num: '7', label: 'Register as Sequencer', time: '10 min', href: '#step-7', keywords: 'register stake dashboard staking validator sequencer' },
+  { num: '8', label: 'Verify Everything Works', time: '5 min', href: '#step-8', keywords: 'verify health check p2p status' },
+  { num: '9', label: 'Day-2 Essentials', time: '5 min', href: '#step-9', keywords: 'rewards monitoring upgrade slashing day 2 operations' },
+  { num: '#', label: 'Config Panel', time: '', href: '#config-panel', keywords: 'config configuration settings panel rpc key' },
+  { num: '?', label: 'Troubleshooting (any step)', time: '', href: '', keywords: 'error trouble help fix debug problem', action: 'trouble' },
+];
+
+let paletteOpen = false;
+let paletteSelected = 0;
+
+function openPalette() {
+  const overlay = document.getElementById('cmd-palette-overlay');
+  overlay.classList.add('open');
+  paletteOpen = true;
+  paletteSelected = 0;
+  const input = document.getElementById('cmd-palette-input');
+  input.value = '';
+  input.focus();
+  filterPalette('');
+}
+
+function closePalette() {
+  document.getElementById('cmd-palette-overlay').classList.remove('open');
+  paletteOpen = false;
+}
+
+function filterPalette(query) {
+  const list = document.getElementById('cmd-palette-list');
+  const q = query.toLowerCase().trim();
+  const matches = q ? paletteItems.filter(item =>
+    item.label.toLowerCase().includes(q) || item.keywords.includes(q)
+  ) : paletteItems;
+
+  if (!matches.length) {
+    list.innerHTML = '<div class="cmd-palette-empty">No matching steps</div>';
+    return;
+  }
+
+  paletteSelected = Math.min(paletteSelected, matches.length - 1);
+  list.innerHTML = matches.map((item, i) =>
+    '<div class="cmd-palette-item' + (i === paletteSelected ? ' selected' : '') + '" data-idx="' + i + '" data-href="' + item.href + '" data-action="' + (item.action || '') + '">' +
+    '<span class="cp-num">' + item.num + '</span>' +
+    '<span class="cp-label">' + item.label + '</span>' +
+    (item.time ? '<span class="cp-time">' + item.time + '</span>' : '') +
+    '</div>'
+  ).join('');
+
+  // Click handlers
+  list.querySelectorAll('.cmd-palette-item').forEach(el => {
+    el.addEventListener('click', () => executePaletteItem(el));
+  });
+}
+
+function executePaletteItem(el) {
+  const href = el.dataset.href;
+  const action = el.dataset.action;
+  closePalette();
+  if (action === 'trouble') {
+    // Open all troubleshooting sections
+    document.querySelectorAll('details.trouble').forEach(d => d.open = true);
+    document.querySelector('details.trouble').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (href) {
+    const target = document.querySelector(href);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// Keyboard listener
+document.addEventListener('keydown', function(e) {
+  // Ctrl+K or Cmd+K to open
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    if (paletteOpen) closePalette(); else openPalette();
+    return;
+  }
+  if (!paletteOpen) return;
+  if (e.key === 'Escape') { closePalette(); return; }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    const items = document.querySelectorAll('.cmd-palette-item');
+    paletteSelected = Math.min(paletteSelected + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === paletteSelected));
+    items[paletteSelected]?.scrollIntoView({ block: 'nearest' });
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const items = document.querySelectorAll('.cmd-palette-item');
+    paletteSelected = Math.max(paletteSelected - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('selected', i === paletteSelected));
+    items[paletteSelected]?.scrollIntoView({ block: 'nearest' });
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const selected = document.querySelector('.cmd-palette-item.selected');
+    if (selected) executePaletteItem(selected);
+  }
+});
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+  loadConfig();
+  loadNetwork();
+  loadChecks();
+  setupInlineSync();
+  renderTemplates();
+  updateProgress();
+  addCopyButtons();
+  setupHighlightLinks();
+});
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  COMMAND PALETTE OVERLAY                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="cmd-palette-overlay" id="cmd-palette-overlay" onclick="if(event.target===this)closePalette()">
+  <div class="cmd-palette">
+    <input type="text" class="cmd-palette-input" id="cmd-palette-input" placeholder="Jump to step..." oninput="filterPalette(this.value)">
+    <div class="cmd-palette-list" id="cmd-palette-list"></div>
+    <div class="cmd-palette-hint"><kbd class="kbd">&uarr;</kbd> <kbd class="kbd">&darr;</kbd> navigate &nbsp; <kbd class="kbd">Enter</kbd> go &nbsp; <kbd class="kbd">Esc</kbd> close</div>
+  </div>
+</div>
+
+</body>
+</html>
